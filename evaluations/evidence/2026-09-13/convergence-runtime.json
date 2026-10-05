@@ -1,0 +1,242 @@
+{
+  "measuredAt": "2026-09-12T22:16:16.593Z",
+  "sourceTreeHash": "9990e783b47cc6734dfc84ffbe29eaa3d6e376c57260961ecd3f7ad952b7fcdf",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v22.19.0",
+    "totalMemoryBytes": 68494569472,
+    "logicalCpus": 16
+  },
+  "policy": {
+    "timeoutMs": 180000,
+    "maxSourceBytes": 4194304,
+    "maxTotalSourceBytes": 16777216,
+    "maxPendingTurns": 8,
+    "maxSourceLines": 16384,
+    "maxSourceFacts": 4096
+  },
+  "snapshots": [
+    {
+      "documentCount": 10,
+      "snapshotBytes": 83960,
+      "completeMutationLatencyMs": {
+        "count": 5,
+        "min": 4.7350999999999885,
+        "p50": 4.998400000000004,
+        "p95": 11.768500000000003,
+        "p99": 11.768500000000003,
+        "max": 11.768500000000003
+      },
+      "observedHeapGrowthBytes": {
+        "count": 5,
+        "min": 1180576,
+        "p50": 1204816,
+        "p95": 1215200,
+        "p99": 1215200,
+        "max": 1215200
+      },
+      "samples": [
+        {
+          "elapsedMs": 6.136600000000001,
+          "heapGrowthBytes": 1204816,
+          "rssGrowthBytes": 606208,
+          "rssAfterBytes": 47828992
+        },
+        {
+          "elapsedMs": 11.768500000000003,
+          "heapGrowthBytes": 1180576,
+          "rssGrowthBytes": 1593344,
+          "rssAfterBytes": 48799744
+        },
+        {
+          "elapsedMs": 4.7812999999999874,
+          "heapGrowthBytes": 1203400,
+          "rssGrowthBytes": 823296,
+          "rssAfterBytes": 49131520
+        },
+        {
+          "elapsedMs": 4.7350999999999885,
+          "heapGrowthBytes": 1208608,
+          "rssGrowthBytes": 774144,
+          "rssAfterBytes": 48824320
+        },
+        {
+          "elapsedMs": 4.998400000000004,
+          "heapGrowthBytes": 1215200,
+          "rssGrowthBytes": 790528,
+          "rssAfterBytes": 48877568
+        }
+      ]
+    },
+    {
+      "documentCount": 500,
+      "snapshotBytes": 3923926,
+      "completeMutationLatencyMs": {
+        "count": 5,
+        "min": 79.93529999999998,
+        "p50": 84.33600000000001,
+        "p95": 97.2071,
+        "p99": 97.2071,
+        "max": 97.2071
+      },
+      "observedHeapGrowthBytes": {
+        "count": 5,
+        "min": 32019400,
+        "p50": 37724648,
+        "p95": 37742944,
+        "p99": 37742944,
+        "max": 37742944
+      },
+      "samples": [
+        {
+          "elapsedMs": 97.2071,
+          "heapGrowthBytes": 32019400,
+          "rssGrowthBytes": 30662656,
+          "rssAfterBytes": 97595392
+        },
+        {
+          "elapsedMs": 84.33600000000001,
+          "heapGrowthBytes": 37706032,
+          "rssGrowthBytes": 35627008,
+          "rssAfterBytes": 110653440
+        },
+        {
+          "elapsedMs": 88.45529999999997,
+          "heapGrowthBytes": 37737080,
+          "rssGrowthBytes": 29011968,
+          "rssAfterBytes": 112988160
+        },
+        {
+          "elapsedMs": 82.10000000000002,
+          "heapGrowthBytes": 37742944,
+          "rssGrowthBytes": 27680768,
+          "rssAfterBytes": 114036736
+        },
+        {
+          "elapsedMs": 79.93529999999998,
+          "heapGrowthBytes": 37724648,
+          "rssGrowthBytes": 27635712,
+          "rssAfterBytes": 114987008
+        }
+      ]
+    },
+    {
+      "documentCount": 2000,
+      "snapshotBytes": 15751932,
+      "completeMutationLatencyMs": {
+        "count": 5,
+        "min": 341.97490000000016,
+        "p50": 347.83370000000014,
+        "p95": 379.51309999999967,
+        "p99": 379.51309999999967,
+        "max": 379.51309999999967
+      },
+      "observedHeapGrowthBytes": {
+        "count": 5,
+        "min": 148343248,
+        "p50": 149257608,
+        "p95": 235141976,
+        "p99": 235141976,
+        "max": 235141976
+      },
+      "samples": [
+        {
+          "elapsedMs": 347.2483,
+          "heapGrowthBytes": 235141976,
+          "rssGrowthBytes": 241807360,
+          "rssAfterBytes": 342298624
+        },
+        {
+          "elapsedMs": 361.68830000000025,
+          "heapGrowthBytes": 149257608,
+          "rssGrowthBytes": 106909696,
+          "rssAfterBytes": 260902912
+        },
+        {
+          "elapsedMs": 347.83370000000014,
+          "heapGrowthBytes": 149258640,
+          "rssGrowthBytes": 106618880,
+          "rssAfterBytes": 261603328
+        },
+        {
+          "elapsedMs": 341.97490000000016,
+          "heapGrowthBytes": 149232640,
+          "rssGrowthBytes": 106594304,
+          "rssAfterBytes": 262262784
+        },
+        {
+          "elapsedMs": 379.51309999999967,
+          "heapGrowthBytes": 148343248,
+          "rssGrowthBytes": 106754048,
+          "rssAfterBytes": 263061504
+        }
+      ]
+    }
+  ],
+  "sourceAdmission": {
+    "rejection": "runtime_source_bytes_limit",
+    "elapsedMs": 1,
+    "timeoutMs": 60000,
+    "maxSourceBytes": 4194304,
+    "maxTotalSourceBytes": 16777216,
+    "sourceBytes": 0,
+    "sourceReads": 0,
+    "processedFragments": 0,
+    "maxSourceLines": 16384,
+    "maxSourceFacts": 4096,
+    "sourceFacts": 0,
+    "truncationReason": "runtime_source_bytes_limit"
+  },
+  "turnAdmission": {
+    "requested": 12,
+    "completed": 8,
+    "capacityRejected": 4
+  },
+  "cooperativeCancellationLatencyMs": {
+    "count": 5,
+    "min": 0.07809999999972206,
+    "p50": 0.129399999999805,
+    "p95": 1.012000000000171,
+    "p99": 1.012000000000171,
+    "max": 1.012000000000171
+  },
+  "matching": [
+    {
+      "strategy": "exact-phrase",
+      "documentCount": 150,
+      "comparisonsPerBuild": 300,
+      "keywordEdges": 300,
+      "latencyMs": {
+        "count": 5,
+        "min": 14.180299999999988,
+        "p50": 17.0925000000002,
+        "p95": 46.483999999999924,
+        "p99": 46.483999999999924,
+        "max": 46.483999999999924
+      }
+    },
+    {
+      "strategy": "fuzzy",
+      "documentCount": 150,
+      "comparisonsPerBuild": 22350,
+      "keywordEdges": 505,
+      "latencyMs": {
+        "count": 5,
+        "min": 15.430299999999988,
+        "p50": 16.818699999999808,
+        "p95": 18.542999999999665,
+        "p99": 18.542999999999665,
+        "max": 18.542999999999665
+      }
+    }
+  ],
+  "peakProcessRssBytes": 357126144,
+  "limitations": [
+    "Synthetic scale calibration; not a claim about every user knowledge base.",
+    "Mutation latency includes snapshot preparation, rollback preimage cloning and durable file persistence.",
+    "Heap growth samples do not capture every transient allocation. RSS is a process-wide high-water mark.",
+    "Cancellation samples use a cooperative backend. A provider ignoring AbortSignal remains leased until quiescent.",
+    "Fuzzy matching retains complete candidate scans; worst-case matching remains quadratic."
+  ]
+}

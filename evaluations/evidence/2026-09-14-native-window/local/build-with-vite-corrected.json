@@ -1,0 +1,14 @@
+{
+  "label": "build-with-vite-corrected",
+  "command": "powershell",
+  "args": [
+    "-NoProfile",
+    "-Command",
+    "npm run build:with-vite"
+  ],
+  "startedAt": "2026-09-14T00:10:30.051Z",
+  "completedAt": "2026-09-14T00:10:38.273Z",
+  "exitCode": 0,
+  "signal": null,
+  "logPath": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-evidence\\build-with-vite-corrected.log"
+}

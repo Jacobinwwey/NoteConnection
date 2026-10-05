@@ -1,0 +1,39 @@
+{
+  "observedAt": "2026-09-13T21:21:39.838Z",
+  "ciRun": 34781056955,
+  "ciRevision": "a6b16a8b12633be25898b5186bb374e756ff733b",
+  "ciJobs": {
+    "Windows": "success",
+    "Linux": "success"
+  },
+  "fingerprintVersion": 1,
+  "local": {
+    "fileCount": 767,
+    "digest": "880be413ab9a1d0830c50dd53da8c602027a0b0b358c3e37b86f6f7609965244"
+  },
+  "gitBlobSource": {
+    "fileCount": 583,
+    "digest": "01862110fd1730ba87569eb18f08871733158911b7e9c2c2c7584b16292e2794"
+  },
+  "windowsCheckout": {
+    "fileCount": 583,
+    "digest": "05ac45f7e3c6b787e757a1ac5ca5d2e4108d34a1078ec1db068323e217936b54",
+    "changedSourcePaths": [
+      "src/backend/wasm/Cargo.lock"
+    ]
+  },
+  "localCompilerCache": {
+    "root": "src/backend/wasm/target",
+    "extraFiles": 184
+  },
+  "compiledInputComparison": {
+    "contentDifferencesAfterLineEndingNormalization": 0,
+    "linuxLineEndingDifferences": 33,
+    "windowsLineEndingDifferences": 27
+  },
+  "regressionsBeforeFix": {
+    "failed": 3,
+    "passed": 6
+  },
+  "decision": "Preserve v1 reports; qualify fresh artifacts with version-2 source identity that excludes the known compiler output tree and normalizes Rust/lockfile text."
+}

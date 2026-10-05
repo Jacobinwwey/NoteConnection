@@ -1,0 +1,1236 @@
+{
+  "verifiedAt": "2026-09-13T19:47:03.528Z",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "nodeVersion": "v22.19.0",
+    "evidenceHostId": "983343981b26ab1985598fc0"
+  },
+  "suiteKind": "soak",
+  "soakCycles": 5,
+  "profileRuns": [
+    {
+      "workloadProfile": {
+        "profileId": "heavy",
+        "documentCount": 180,
+        "minDocumentCount": 180,
+        "minAtomCount": 180
+      },
+      "modes": [
+        {
+          "mode": "dist_node_runtime",
+          "profileId": "heavy",
+          "suiteKind": "soak",
+          "restartCycleCount": 5,
+          "ingestedDocuments": 180,
+          "sqlitePath": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\temp\\noteconnection-foundation-dist_node_runtime-J19Bro\\project\\runtime_data\\knowledge_graph_store.graphdb.v1.sqlite",
+          "firstPass": {
+            "startupDurationMs": 1519,
+            "startupProbeCount": 7,
+            "ingestDurationMs": 1587,
+            "diagnostics": {
+              "storeType": "graphdb",
+              "storageEngine": "sqlite",
+              "requestedProvider": "sqlite",
+              "resolvedProvider": "sqlite",
+              "fallbackReason": "",
+              "backendReady": true,
+              "usingFallback": false,
+              "location": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\temp\\noteconnection-foundation-dist_node_runtime-J19Bro\\project\\runtime_data\\knowledge_graph_store.graphdb.v1.sqlite",
+              "snapshotMetadata": {
+                "documentCount": 180,
+                "atomCount": 180,
+                "relationEdgeCount": 32220,
+                "temporalEdgeCount": 0
+              },
+              "durationMs": 2
+            },
+            "readiness": {
+              "status": "integrated",
+              "decision": "go",
+              "storeType": "sqlite",
+              "storageRequestedProvider": "sqlite",
+              "storageResolvedProvider": "sqlite",
+              "graphBackendSignalKind": "embedded_graphdb",
+              "graphBackendIndependent": true,
+              "durationMs": 4
+            },
+            "queries": [
+              {
+                "phaseId": "generic",
+                "itemCount": 10,
+                "matchedDocumentId": "",
+                "durationMs": 74
+              },
+              {
+                "phaseId": "anchor_0",
+                "itemCount": 1,
+                "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_0",
+                "durationMs": 39
+              },
+              {
+                "phaseId": "anchor_90",
+                "itemCount": 1,
+                "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_90",
+                "durationMs": 36
+              },
+              {
+                "phaseId": "anchor_179",
+                "itemCount": 1,
+                "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_179",
+                "durationMs": 33
+              }
+            ]
+          },
+          "restartPass": {
+            "cycleIndex": 1,
+            "startupDurationMs": 1545,
+            "startupProbeCount": 7,
+            "diagnostics": {
+              "storeType": "graphdb",
+              "storageEngine": "sqlite",
+              "requestedProvider": "sqlite",
+              "resolvedProvider": "sqlite",
+              "fallbackReason": "",
+              "backendReady": true,
+              "usingFallback": false,
+              "location": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\temp\\noteconnection-foundation-dist_node_runtime-J19Bro\\project\\runtime_data\\knowledge_graph_store.graphdb.v1.sqlite",
+              "snapshotMetadata": {
+                "documentCount": 180,
+                "atomCount": 180,
+                "relationEdgeCount": 32220,
+                "temporalEdgeCount": 0
+              },
+              "durationMs": 1
+            },
+            "readiness": {
+              "status": "integrated",
+              "decision": "go",
+              "storeType": "sqlite",
+              "storageRequestedProvider": "sqlite",
+              "storageResolvedProvider": "sqlite",
+              "graphBackendSignalKind": "embedded_graphdb",
+              "graphBackendIndependent": true,
+              "durationMs": 4
+            },
+            "queries": [
+              {
+                "phaseId": "generic",
+                "itemCount": 10,
+                "matchedDocumentId": "",
+                "durationMs": 52
+              },
+              {
+                "phaseId": "anchor_0",
+                "itemCount": 1,
+                "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_0",
+                "durationMs": 36
+              },
+              {
+                "phaseId": "anchor_90",
+                "itemCount": 1,
+                "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_90",
+                "durationMs": 36
+              },
+              {
+                "phaseId": "anchor_179",
+                "itemCount": 1,
+                "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_179",
+                "durationMs": 40
+              }
+            ]
+          },
+          "restartCycles": [
+            {
+              "cycleIndex": 1,
+              "startupDurationMs": 1545,
+              "startupProbeCount": 7,
+              "diagnostics": {
+                "storeType": "graphdb",
+                "storageEngine": "sqlite",
+                "requestedProvider": "sqlite",
+                "resolvedProvider": "sqlite",
+                "fallbackReason": "",
+                "backendReady": true,
+                "usingFallback": false,
+                "location": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\temp\\noteconnection-foundation-dist_node_runtime-J19Bro\\project\\runtime_data\\knowledge_graph_store.graphdb.v1.sqlite",
+                "snapshotMetadata": {
+                  "documentCount": 180,
+                  "atomCount": 180,
+                  "relationEdgeCount": 32220,
+                  "temporalEdgeCount": 0
+                },
+                "durationMs": 1
+              },
+              "readiness": {
+                "status": "integrated",
+                "decision": "go",
+                "storeType": "sqlite",
+                "storageRequestedProvider": "sqlite",
+                "storageResolvedProvider": "sqlite",
+                "graphBackendSignalKind": "embedded_graphdb",
+                "graphBackendIndependent": true,
+                "durationMs": 4
+              },
+              "queries": [
+                {
+                  "phaseId": "generic",
+                  "itemCount": 10,
+                  "matchedDocumentId": "",
+                  "durationMs": 52
+                },
+                {
+                  "phaseId": "anchor_0",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_0",
+                  "durationMs": 36
+                },
+                {
+                  "phaseId": "anchor_90",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_90",
+                  "durationMs": 36
+                },
+                {
+                  "phaseId": "anchor_179",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_179",
+                  "durationMs": 40
+                }
+              ]
+            },
+            {
+              "cycleIndex": 2,
+              "startupDurationMs": 1650,
+              "startupProbeCount": 7,
+              "diagnostics": {
+                "storeType": "graphdb",
+                "storageEngine": "sqlite",
+                "requestedProvider": "sqlite",
+                "resolvedProvider": "sqlite",
+                "fallbackReason": "",
+                "backendReady": true,
+                "usingFallback": false,
+                "location": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\temp\\noteconnection-foundation-dist_node_runtime-J19Bro\\project\\runtime_data\\knowledge_graph_store.graphdb.v1.sqlite",
+                "snapshotMetadata": {
+                  "documentCount": 180,
+                  "atomCount": 180,
+                  "relationEdgeCount": 32220,
+                  "temporalEdgeCount": 0
+                },
+                "durationMs": 1
+              },
+              "readiness": {
+                "status": "integrated",
+                "decision": "go",
+                "storeType": "sqlite",
+                "storageRequestedProvider": "sqlite",
+                "storageResolvedProvider": "sqlite",
+                "graphBackendSignalKind": "embedded_graphdb",
+                "graphBackendIndependent": true,
+                "durationMs": 5
+              },
+              "queries": [
+                {
+                  "phaseId": "generic",
+                  "itemCount": 10,
+                  "matchedDocumentId": "",
+                  "durationMs": 52
+                },
+                {
+                  "phaseId": "anchor_0",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_0",
+                  "durationMs": 35
+                },
+                {
+                  "phaseId": "anchor_90",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_90",
+                  "durationMs": 34
+                },
+                {
+                  "phaseId": "anchor_179",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_179",
+                  "durationMs": 37
+                }
+              ]
+            },
+            {
+              "cycleIndex": 3,
+              "startupDurationMs": 1423,
+              "startupProbeCount": 6,
+              "diagnostics": {
+                "storeType": "graphdb",
+                "storageEngine": "sqlite",
+                "requestedProvider": "sqlite",
+                "resolvedProvider": "sqlite",
+                "fallbackReason": "",
+                "backendReady": true,
+                "usingFallback": false,
+                "location": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\temp\\noteconnection-foundation-dist_node_runtime-J19Bro\\project\\runtime_data\\knowledge_graph_store.graphdb.v1.sqlite",
+                "snapshotMetadata": {
+                  "documentCount": 180,
+                  "atomCount": 180,
+                  "relationEdgeCount": 32220,
+                  "temporalEdgeCount": 0
+                },
+                "durationMs": 1
+              },
+              "readiness": {
+                "status": "integrated",
+                "decision": "go",
+                "storeType": "sqlite",
+                "storageRequestedProvider": "sqlite",
+                "storageResolvedProvider": "sqlite",
+                "graphBackendSignalKind": "embedded_graphdb",
+                "graphBackendIndependent": true,
+                "durationMs": 3
+              },
+              "queries": [
+                {
+                  "phaseId": "generic",
+                  "itemCount": 10,
+                  "matchedDocumentId": "",
+                  "durationMs": 51
+                },
+                {
+                  "phaseId": "anchor_0",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_0",
+                  "durationMs": 34
+                },
+                {
+                  "phaseId": "anchor_90",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_90",
+                  "durationMs": 36
+                },
+                {
+                  "phaseId": "anchor_179",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_179",
+                  "durationMs": 37
+                }
+              ]
+            },
+            {
+              "cycleIndex": 4,
+              "startupDurationMs": 1361,
+              "startupProbeCount": 6,
+              "diagnostics": {
+                "storeType": "graphdb",
+                "storageEngine": "sqlite",
+                "requestedProvider": "sqlite",
+                "resolvedProvider": "sqlite",
+                "fallbackReason": "",
+                "backendReady": true,
+                "usingFallback": false,
+                "location": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\temp\\noteconnection-foundation-dist_node_runtime-J19Bro\\project\\runtime_data\\knowledge_graph_store.graphdb.v1.sqlite",
+                "snapshotMetadata": {
+                  "documentCount": 180,
+                  "atomCount": 180,
+                  "relationEdgeCount": 32220,
+                  "temporalEdgeCount": 0
+                },
+                "durationMs": 1
+              },
+              "readiness": {
+                "status": "integrated",
+                "decision": "go",
+                "storeType": "sqlite",
+                "storageRequestedProvider": "sqlite",
+                "storageResolvedProvider": "sqlite",
+                "graphBackendSignalKind": "embedded_graphdb",
+                "graphBackendIndependent": true,
+                "durationMs": 3
+              },
+              "queries": [
+                {
+                  "phaseId": "generic",
+                  "itemCount": 10,
+                  "matchedDocumentId": "",
+                  "durationMs": 65
+                },
+                {
+                  "phaseId": "anchor_0",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_0",
+                  "durationMs": 50
+                },
+                {
+                  "phaseId": "anchor_90",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_90",
+                  "durationMs": 35
+                },
+                {
+                  "phaseId": "anchor_179",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_179",
+                  "durationMs": 73
+                }
+              ]
+            },
+            {
+              "cycleIndex": 5,
+              "startupDurationMs": 1382,
+              "startupProbeCount": 6,
+              "diagnostics": {
+                "storeType": "graphdb",
+                "storageEngine": "sqlite",
+                "requestedProvider": "sqlite",
+                "resolvedProvider": "sqlite",
+                "fallbackReason": "",
+                "backendReady": true,
+                "usingFallback": false,
+                "location": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\temp\\noteconnection-foundation-dist_node_runtime-J19Bro\\project\\runtime_data\\knowledge_graph_store.graphdb.v1.sqlite",
+                "snapshotMetadata": {
+                  "documentCount": 180,
+                  "atomCount": 180,
+                  "relationEdgeCount": 32220,
+                  "temporalEdgeCount": 0
+                },
+                "durationMs": 1
+              },
+              "readiness": {
+                "status": "integrated",
+                "decision": "go",
+                "storeType": "sqlite",
+                "storageRequestedProvider": "sqlite",
+                "storageResolvedProvider": "sqlite",
+                "graphBackendSignalKind": "embedded_graphdb",
+                "graphBackendIndependent": true,
+                "durationMs": 3
+              },
+              "queries": [
+                {
+                  "phaseId": "generic",
+                  "itemCount": 10,
+                  "matchedDocumentId": "",
+                  "durationMs": 61
+                },
+                {
+                  "phaseId": "anchor_0",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_0",
+                  "durationMs": 34
+                },
+                {
+                  "phaseId": "anchor_90",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_90",
+                  "durationMs": 36
+                },
+                {
+                  "phaseId": "anchor_179",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_dist_node_runtime_179",
+                  "durationMs": 37
+                }
+              ]
+            }
+          ],
+          "performance": {
+            "startupDurationMs": {
+              "count": 6,
+              "minMs": 1361,
+              "p50Ms": 1471,
+              "p95Ms": 1623.75,
+              "p99Ms": 1644.75,
+              "maxMs": 1650,
+              "meanMs": 1480
+            },
+            "ingestDurationMs": {
+              "count": 1,
+              "minMs": 1587,
+              "p50Ms": 1587,
+              "p95Ms": 1587,
+              "p99Ms": 1587,
+              "maxMs": 1587,
+              "meanMs": 1587
+            },
+            "readinessDurationMs": {
+              "count": 6,
+              "minMs": 3,
+              "p50Ms": 3.5,
+              "p95Ms": 4.75,
+              "p99Ms": 4.95,
+              "maxMs": 5,
+              "meanMs": 3.6667
+            },
+            "diagnosticsDurationMs": {
+              "count": 6,
+              "minMs": 1,
+              "p50Ms": 1,
+              "p95Ms": 1.75,
+              "p99Ms": 1.95,
+              "maxMs": 2,
+              "meanMs": 1.1667
+            },
+            "queryDurationMs": {
+              "count": 24,
+              "minMs": 33,
+              "p50Ms": 37,
+              "p95Ms": 71.8,
+              "p99Ms": 73.77,
+              "maxMs": 74,
+              "meanMs": 43.875
+            }
+          },
+          "soak": {
+            "profileId": "heavy",
+            "restartCycleCount": 5,
+            "thresholds": {
+              "maxStartupP95Ms": 12000,
+              "maxStartupMaxMs": 18000,
+              "maxIngestP95Ms": 18000,
+              "maxIngestMaxMs": 32000,
+              "maxReadinessP95Ms": 4500,
+              "maxDiagnosticsP95Ms": 4500,
+              "maxQueryP95Ms": 2500,
+              "maxQueryMaxMs": 6000
+            },
+            "metrics": {
+              "startupDurationMs": {
+                "count": 6,
+                "minMs": 1361,
+                "p50Ms": 1471,
+                "p95Ms": 1623.75,
+                "p99Ms": 1644.75,
+                "maxMs": 1650,
+                "meanMs": 1480
+              },
+              "ingestDurationMs": {
+                "count": 1,
+                "minMs": 1587,
+                "p50Ms": 1587,
+                "p95Ms": 1587,
+                "p99Ms": 1587,
+                "maxMs": 1587,
+                "meanMs": 1587
+              },
+              "readinessDurationMs": {
+                "count": 6,
+                "minMs": 3,
+                "p50Ms": 3.5,
+                "p95Ms": 4.75,
+                "p99Ms": 4.95,
+                "maxMs": 5,
+                "meanMs": 3.6667
+              },
+              "diagnosticsDurationMs": {
+                "count": 6,
+                "minMs": 1,
+                "p50Ms": 1,
+                "p95Ms": 1.75,
+                "p99Ms": 1.95,
+                "maxMs": 2,
+                "meanMs": 1.1667
+              },
+              "queryDurationMs": {
+                "count": 24,
+                "minMs": 33,
+                "p50Ms": 37,
+                "p95Ms": 71.8,
+                "p99Ms": 73.77,
+                "maxMs": 74,
+                "meanMs": 43.875
+              }
+            },
+            "gates": [
+              {
+                "gateId": "startup_p95",
+                "label": "Startup p95 must stay within soak budget.",
+                "passed": true,
+                "observedMs": 1623.75,
+                "maxAllowedMs": 12000,
+                "sampleCount": 6
+              },
+              {
+                "gateId": "startup_max",
+                "label": "Startup max must stay within soak budget.",
+                "passed": true,
+                "observedMs": 1650,
+                "maxAllowedMs": 18000,
+                "sampleCount": 6
+              },
+              {
+                "gateId": "ingest_p95",
+                "label": "Ingest p95 must stay within soak budget.",
+                "passed": true,
+                "observedMs": 1587,
+                "maxAllowedMs": 18000,
+                "sampleCount": 1
+              },
+              {
+                "gateId": "ingest_max",
+                "label": "Ingest max must stay within soak budget.",
+                "passed": true,
+                "observedMs": 1587,
+                "maxAllowedMs": 32000,
+                "sampleCount": 1
+              },
+              {
+                "gateId": "readiness_p95",
+                "label": "Foundation readiness p95 must stay within soak budget.",
+                "passed": true,
+                "observedMs": 4.75,
+                "maxAllowedMs": 4500,
+                "sampleCount": 6
+              },
+              {
+                "gateId": "diagnostics_p95",
+                "label": "Store diagnostics p95 must stay within soak budget.",
+                "passed": true,
+                "observedMs": 1.75,
+                "maxAllowedMs": 4500,
+                "sampleCount": 6
+              },
+              {
+                "gateId": "query_p95",
+                "label": "Query p95 must stay within soak budget.",
+                "passed": true,
+                "observedMs": 71.8,
+                "maxAllowedMs": 2500,
+                "sampleCount": 24
+              },
+              {
+                "gateId": "query_max",
+                "label": "Query max must stay within soak budget.",
+                "passed": true,
+                "observedMs": 74,
+                "maxAllowedMs": 6000,
+                "sampleCount": 24
+              }
+            ],
+            "pass": true
+          },
+          "runtime": {
+            "nodeVersion": "v22.19.0",
+            "platform": "win32",
+            "arch": "x64"
+          }
+        },
+        {
+          "mode": "packaged_sidecar",
+          "profileId": "heavy",
+          "suiteKind": "soak",
+          "restartCycleCount": 5,
+          "ingestedDocuments": 180,
+          "sqlitePath": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\temp\\noteconnection-foundation-packaged_sidecar-QPZlya\\project\\runtime_data\\knowledge_graph_store.graphdb.v1.sqlite",
+          "firstPass": {
+            "startupDurationMs": 1517,
+            "startupProbeCount": 7,
+            "ingestDurationMs": 1467,
+            "diagnostics": {
+              "storeType": "graphdb",
+              "storageEngine": "sqlite",
+              "requestedProvider": "sqlite",
+              "resolvedProvider": "sqlite",
+              "fallbackReason": "",
+              "backendReady": true,
+              "usingFallback": false,
+              "location": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\temp\\noteconnection-foundation-packaged_sidecar-QPZlya\\project\\runtime_data\\knowledge_graph_store.graphdb.v1.sqlite",
+              "snapshotMetadata": {
+                "documentCount": 180,
+                "atomCount": 180,
+                "relationEdgeCount": 32220,
+                "temporalEdgeCount": 0
+              },
+              "durationMs": 2
+            },
+            "readiness": {
+              "status": "integrated",
+              "decision": "go",
+              "storeType": "sqlite",
+              "storageRequestedProvider": "sqlite",
+              "storageResolvedProvider": "sqlite",
+              "graphBackendSignalKind": "embedded_graphdb",
+              "graphBackendIndependent": true,
+              "durationMs": 3
+            },
+            "queries": [
+              {
+                "phaseId": "generic",
+                "itemCount": 10,
+                "matchedDocumentId": "",
+                "durationMs": 48
+              },
+              {
+                "phaseId": "anchor_0",
+                "itemCount": 1,
+                "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_0",
+                "durationMs": 38
+              },
+              {
+                "phaseId": "anchor_90",
+                "itemCount": 1,
+                "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_90",
+                "durationMs": 32
+              },
+              {
+                "phaseId": "anchor_179",
+                "itemCount": 1,
+                "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_179",
+                "durationMs": 33
+              }
+            ]
+          },
+          "restartPass": {
+            "cycleIndex": 1,
+            "startupDurationMs": 1512,
+            "startupProbeCount": 7,
+            "diagnostics": {
+              "storeType": "graphdb",
+              "storageEngine": "sqlite",
+              "requestedProvider": "sqlite",
+              "resolvedProvider": "sqlite",
+              "fallbackReason": "",
+              "backendReady": true,
+              "usingFallback": false,
+              "location": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\temp\\noteconnection-foundation-packaged_sidecar-QPZlya\\project\\runtime_data\\knowledge_graph_store.graphdb.v1.sqlite",
+              "snapshotMetadata": {
+                "documentCount": 180,
+                "atomCount": 180,
+                "relationEdgeCount": 32220,
+                "temporalEdgeCount": 0
+              },
+              "durationMs": 1
+            },
+            "readiness": {
+              "status": "integrated",
+              "decision": "go",
+              "storeType": "sqlite",
+              "storageRequestedProvider": "sqlite",
+              "storageResolvedProvider": "sqlite",
+              "graphBackendSignalKind": "embedded_graphdb",
+              "graphBackendIndependent": true,
+              "durationMs": 3
+            },
+            "queries": [
+              {
+                "phaseId": "generic",
+                "itemCount": 10,
+                "matchedDocumentId": "",
+                "durationMs": 48
+              },
+              {
+                "phaseId": "anchor_0",
+                "itemCount": 1,
+                "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_0",
+                "durationMs": 32
+              },
+              {
+                "phaseId": "anchor_90",
+                "itemCount": 1,
+                "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_90",
+                "durationMs": 33
+              },
+              {
+                "phaseId": "anchor_179",
+                "itemCount": 1,
+                "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_179",
+                "durationMs": 33
+              }
+            ]
+          },
+          "restartCycles": [
+            {
+              "cycleIndex": 1,
+              "startupDurationMs": 1512,
+              "startupProbeCount": 7,
+              "diagnostics": {
+                "storeType": "graphdb",
+                "storageEngine": "sqlite",
+                "requestedProvider": "sqlite",
+                "resolvedProvider": "sqlite",
+                "fallbackReason": "",
+                "backendReady": true,
+                "usingFallback": false,
+                "location": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\temp\\noteconnection-foundation-packaged_sidecar-QPZlya\\project\\runtime_data\\knowledge_graph_store.graphdb.v1.sqlite",
+                "snapshotMetadata": {
+                  "documentCount": 180,
+                  "atomCount": 180,
+                  "relationEdgeCount": 32220,
+                  "temporalEdgeCount": 0
+                },
+                "durationMs": 1
+              },
+              "readiness": {
+                "status": "integrated",
+                "decision": "go",
+                "storeType": "sqlite",
+                "storageRequestedProvider": "sqlite",
+                "storageResolvedProvider": "sqlite",
+                "graphBackendSignalKind": "embedded_graphdb",
+                "graphBackendIndependent": true,
+                "durationMs": 3
+              },
+              "queries": [
+                {
+                  "phaseId": "generic",
+                  "itemCount": 10,
+                  "matchedDocumentId": "",
+                  "durationMs": 48
+                },
+                {
+                  "phaseId": "anchor_0",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_0",
+                  "durationMs": 32
+                },
+                {
+                  "phaseId": "anchor_90",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_90",
+                  "durationMs": 33
+                },
+                {
+                  "phaseId": "anchor_179",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_179",
+                  "durationMs": 33
+                }
+              ]
+            },
+            {
+              "cycleIndex": 2,
+              "startupDurationMs": 1358,
+              "startupProbeCount": 6,
+              "diagnostics": {
+                "storeType": "graphdb",
+                "storageEngine": "sqlite",
+                "requestedProvider": "sqlite",
+                "resolvedProvider": "sqlite",
+                "fallbackReason": "",
+                "backendReady": true,
+                "usingFallback": false,
+                "location": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\temp\\noteconnection-foundation-packaged_sidecar-QPZlya\\project\\runtime_data\\knowledge_graph_store.graphdb.v1.sqlite",
+                "snapshotMetadata": {
+                  "documentCount": 180,
+                  "atomCount": 180,
+                  "relationEdgeCount": 32220,
+                  "temporalEdgeCount": 0
+                },
+                "durationMs": 1
+              },
+              "readiness": {
+                "status": "integrated",
+                "decision": "go",
+                "storeType": "sqlite",
+                "storageRequestedProvider": "sqlite",
+                "storageResolvedProvider": "sqlite",
+                "graphBackendSignalKind": "embedded_graphdb",
+                "graphBackendIndependent": true,
+                "durationMs": 3
+              },
+              "queries": [
+                {
+                  "phaseId": "generic",
+                  "itemCount": 10,
+                  "matchedDocumentId": "",
+                  "durationMs": 88
+                },
+                {
+                  "phaseId": "anchor_0",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_0",
+                  "durationMs": 41
+                },
+                {
+                  "phaseId": "anchor_90",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_90",
+                  "durationMs": 31
+                },
+                {
+                  "phaseId": "anchor_179",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_179",
+                  "durationMs": 62
+                }
+              ]
+            },
+            {
+              "cycleIndex": 3,
+              "startupDurationMs": 1412,
+              "startupProbeCount": 6,
+              "diagnostics": {
+                "storeType": "graphdb",
+                "storageEngine": "sqlite",
+                "requestedProvider": "sqlite",
+                "resolvedProvider": "sqlite",
+                "fallbackReason": "",
+                "backendReady": true,
+                "usingFallback": false,
+                "location": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\temp\\noteconnection-foundation-packaged_sidecar-QPZlya\\project\\runtime_data\\knowledge_graph_store.graphdb.v1.sqlite",
+                "snapshotMetadata": {
+                  "documentCount": 180,
+                  "atomCount": 180,
+                  "relationEdgeCount": 32220,
+                  "temporalEdgeCount": 0
+                },
+                "durationMs": 1
+              },
+              "readiness": {
+                "status": "integrated",
+                "decision": "go",
+                "storeType": "sqlite",
+                "storageRequestedProvider": "sqlite",
+                "storageResolvedProvider": "sqlite",
+                "graphBackendSignalKind": "embedded_graphdb",
+                "graphBackendIndependent": true,
+                "durationMs": 3
+              },
+              "queries": [
+                {
+                  "phaseId": "generic",
+                  "itemCount": 10,
+                  "matchedDocumentId": "",
+                  "durationMs": 49
+                },
+                {
+                  "phaseId": "anchor_0",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_0",
+                  "durationMs": 32
+                },
+                {
+                  "phaseId": "anchor_90",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_90",
+                  "durationMs": 32
+                },
+                {
+                  "phaseId": "anchor_179",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_179",
+                  "durationMs": 33
+                }
+              ]
+            },
+            {
+              "cycleIndex": 4,
+              "startupDurationMs": 1417,
+              "startupProbeCount": 6,
+              "diagnostics": {
+                "storeType": "graphdb",
+                "storageEngine": "sqlite",
+                "requestedProvider": "sqlite",
+                "resolvedProvider": "sqlite",
+                "fallbackReason": "",
+                "backendReady": true,
+                "usingFallback": false,
+                "location": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\temp\\noteconnection-foundation-packaged_sidecar-QPZlya\\project\\runtime_data\\knowledge_graph_store.graphdb.v1.sqlite",
+                "snapshotMetadata": {
+                  "documentCount": 180,
+                  "atomCount": 180,
+                  "relationEdgeCount": 32220,
+                  "temporalEdgeCount": 0
+                },
+                "durationMs": 1
+              },
+              "readiness": {
+                "status": "integrated",
+                "decision": "go",
+                "storeType": "sqlite",
+                "storageRequestedProvider": "sqlite",
+                "storageResolvedProvider": "sqlite",
+                "graphBackendSignalKind": "embedded_graphdb",
+                "graphBackendIndependent": true,
+                "durationMs": 2
+              },
+              "queries": [
+                {
+                  "phaseId": "generic",
+                  "itemCount": 10,
+                  "matchedDocumentId": "",
+                  "durationMs": 43
+                },
+                {
+                  "phaseId": "anchor_0",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_0",
+                  "durationMs": 34
+                },
+                {
+                  "phaseId": "anchor_90",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_90",
+                  "durationMs": 31
+                },
+                {
+                  "phaseId": "anchor_179",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_179",
+                  "durationMs": 36
+                }
+              ]
+            },
+            {
+              "cycleIndex": 5,
+              "startupDurationMs": 1422,
+              "startupProbeCount": 6,
+              "diagnostics": {
+                "storeType": "graphdb",
+                "storageEngine": "sqlite",
+                "requestedProvider": "sqlite",
+                "resolvedProvider": "sqlite",
+                "fallbackReason": "",
+                "backendReady": true,
+                "usingFallback": false,
+                "location": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\temp\\noteconnection-foundation-packaged_sidecar-QPZlya\\project\\runtime_data\\knowledge_graph_store.graphdb.v1.sqlite",
+                "snapshotMetadata": {
+                  "documentCount": 180,
+                  "atomCount": 180,
+                  "relationEdgeCount": 32220,
+                  "temporalEdgeCount": 0
+                },
+                "durationMs": 2
+              },
+              "readiness": {
+                "status": "integrated",
+                "decision": "go",
+                "storeType": "sqlite",
+                "storageRequestedProvider": "sqlite",
+                "storageResolvedProvider": "sqlite",
+                "graphBackendSignalKind": "embedded_graphdb",
+                "graphBackendIndependent": true,
+                "durationMs": 4
+              },
+              "queries": [
+                {
+                  "phaseId": "generic",
+                  "itemCount": 10,
+                  "matchedDocumentId": "",
+                  "durationMs": 45
+                },
+                {
+                  "phaseId": "anchor_0",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_0",
+                  "durationMs": 32
+                },
+                {
+                  "phaseId": "anchor_90",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_90",
+                  "durationMs": 33
+                },
+                {
+                  "phaseId": "anchor_179",
+                  "itemCount": 1,
+                  "matchedDocumentId": "doc_heavy_runtime_packaged_sidecar_179",
+                  "durationMs": 35
+                }
+              ]
+            }
+          ],
+          "performance": {
+            "startupDurationMs": {
+              "count": 6,
+              "minMs": 1358,
+              "p50Ms": 1419.5,
+              "p95Ms": 1515.75,
+              "p99Ms": 1516.75,
+              "maxMs": 1517,
+              "meanMs": 1439.6667
+            },
+            "ingestDurationMs": {
+              "count": 1,
+              "minMs": 1467,
+              "p50Ms": 1467,
+              "p95Ms": 1467,
+              "p99Ms": 1467,
+              "maxMs": 1467,
+              "meanMs": 1467
+            },
+            "readinessDurationMs": {
+              "count": 6,
+              "minMs": 2,
+              "p50Ms": 3,
+              "p95Ms": 3.75,
+              "p99Ms": 3.95,
+              "maxMs": 4,
+              "meanMs": 3
+            },
+            "diagnosticsDurationMs": {
+              "count": 6,
+              "minMs": 1,
+              "p50Ms": 1,
+              "p95Ms": 2,
+              "p99Ms": 2,
+              "maxMs": 2,
+              "meanMs": 1.3333
+            },
+            "queryDurationMs": {
+              "count": 24,
+              "minMs": 31,
+              "p50Ms": 33.5,
+              "p95Ms": 60.05,
+              "p99Ms": 82.02,
+              "maxMs": 88,
+              "meanMs": 39.75
+            }
+          },
+          "soak": {
+            "profileId": "heavy",
+            "restartCycleCount": 5,
+            "thresholds": {
+              "maxStartupP95Ms": 15000,
+              "maxStartupMaxMs": 22500,
+              "maxIngestP95Ms": 22500,
+              "maxIngestMaxMs": 40000,
+              "maxReadinessP95Ms": 5625,
+              "maxDiagnosticsP95Ms": 5625,
+              "maxQueryP95Ms": 3125,
+              "maxQueryMaxMs": 7500
+            },
+            "metrics": {
+              "startupDurationMs": {
+                "count": 6,
+                "minMs": 1358,
+                "p50Ms": 1419.5,
+                "p95Ms": 1515.75,
+                "p99Ms": 1516.75,
+                "maxMs": 1517,
+                "meanMs": 1439.6667
+              },
+              "ingestDurationMs": {
+                "count": 1,
+                "minMs": 1467,
+                "p50Ms": 1467,
+                "p95Ms": 1467,
+                "p99Ms": 1467,
+                "maxMs": 1467,
+                "meanMs": 1467
+              },
+              "readinessDurationMs": {
+                "count": 6,
+                "minMs": 2,
+                "p50Ms": 3,
+                "p95Ms": 3.75,
+                "p99Ms": 3.95,
+                "maxMs": 4,
+                "meanMs": 3
+              },
+              "diagnosticsDurationMs": {
+                "count": 6,
+                "minMs": 1,
+                "p50Ms": 1,
+                "p95Ms": 2,
+                "p99Ms": 2,
+                "maxMs": 2,
+                "meanMs": 1.3333
+              },
+              "queryDurationMs": {
+                "count": 24,
+                "minMs": 31,
+                "p50Ms": 33.5,
+                "p95Ms": 60.05,
+                "p99Ms": 82.02,
+                "maxMs": 88,
+                "meanMs": 39.75
+              }
+            },
+            "gates": [
+              {
+                "gateId": "startup_p95",
+                "label": "Startup p95 must stay within soak budget.",
+                "passed": true,
+                "observedMs": 1515.75,
+                "maxAllowedMs": 15000,
+                "sampleCount": 6
+              },
+              {
+                "gateId": "startup_max",
+                "label": "Startup max must stay within soak budget.",
+                "passed": true,
+                "observedMs": 1517,
+                "maxAllowedMs": 22500,
+                "sampleCount": 6
+              },
+              {
+                "gateId": "ingest_p95",
+                "label": "Ingest p95 must stay within soak budget.",
+                "passed": true,
+                "observedMs": 1467,
+                "maxAllowedMs": 22500,
+                "sampleCount": 1
+              },
+              {
+                "gateId": "ingest_max",
+                "label": "Ingest max must stay within soak budget.",
+                "passed": true,
+                "observedMs": 1467,
+                "maxAllowedMs": 40000,
+                "sampleCount": 1
+              },
+              {
+                "gateId": "readiness_p95",
+                "label": "Foundation readiness p95 must stay within soak budget.",
+                "passed": true,
+                "observedMs": 3.75,
+                "maxAllowedMs": 5625,
+                "sampleCount": 6
+              },
+              {
+                "gateId": "diagnostics_p95",
+                "label": "Store diagnostics p95 must stay within soak budget.",
+                "passed": true,
+                "observedMs": 2,
+                "maxAllowedMs": 5625,
+                "sampleCount": 6
+              },
+              {
+                "gateId": "query_p95",
+                "label": "Query p95 must stay within soak budget.",
+                "passed": true,
+                "observedMs": 60.05,
+                "maxAllowedMs": 3125,
+                "sampleCount": 24
+              },
+              {
+                "gateId": "query_max",
+                "label": "Query max must stay within soak budget.",
+                "passed": true,
+                "observedMs": 88,
+                "maxAllowedMs": 7500,
+                "sampleCount": 24
+              }
+            ],
+            "pass": true
+          },
+          "runtime": {
+            "nodeVersion": "v22.22.0",
+            "platform": "win32",
+            "arch": "x64"
+          }
+        }
+      ]
+    }
+  ],
+  "provenance": {
+    "schemaVersion": 1,
+    "runId": "4aba9ec2-313b-4d1b-86eb-896f8eafa55c",
+    "sourceRevision": "8564294bc6757e6ea2a18e06ba482f5a618a95ad",
+    "sourceTreeHash": "880be413ab9a1d0830c50dd53da8c602027a0b0b358c3e37b86f6f7609965244",
+    "artifacts": {
+      "dist_node_runtime": {
+        "kind": "sidecar_inputs",
+        "path": "dist/src",
+        "sha256": "a2fda96deb587eb966d3100f4e9936fe2bfc13a632a969fb6d9667984e70e904",
+        "sizeBytes": 28064314
+      },
+      "packaged_sidecar": {
+        "kind": "file",
+        "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
+        "sha256": "931916d2f39b2737edac394bb8ffb5c71f571664c59770ff2438fc94b121cdb8",
+        "sizeBytes": 77917101
+      }
+    },
+    "workloadHash": "3a333a8bcee5d8b3a98c28b50911b3b0b84a8c1b3a9a88f62141b2bb55afa3f9"
+  }
+}

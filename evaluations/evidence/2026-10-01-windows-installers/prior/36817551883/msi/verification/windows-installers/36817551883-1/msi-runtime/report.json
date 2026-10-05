@@ -1,0 +1,230 @@
+{
+  "generatedAt": "2026-10-01T05:10:10.706Z",
+  "sourceRevision": "227678d349a5d52bbecad51980755f28fb80a09c",
+  "run": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\msi-runtime",
+  "executable": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\MSI installed\\npm.exe",
+  "applicationPid": 6668,
+  "debugPort": 51699,
+  "launchRoot": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\msi-runtime\\unrelated launcher",
+  "checks": {
+    "writableManifest": true,
+    "godotConnected": true,
+    "graph": {
+      "nodes": [
+        "Alpha",
+        "Beta"
+      ],
+      "edges": 2
+    },
+    "godotLayout": true,
+    "windowTransitions": true
+  },
+  "runtimePorts": {
+    "http": 61796,
+    "bridge": 50616
+  },
+  "beforePathMode": {
+    "windows": [
+      {
+        "processId": 6668,
+        "handle": 196960,
+        "title": "NoteConnection",
+        "visible": true
+      },
+      {
+        "processId": 6232,
+        "handle": 66072,
+        "title": "NoteConnection Path Renderer (DEBUG)",
+        "visible": false
+      }
+    ],
+    "appPid": 6668,
+    "childPids": [
+      8288,
+      1572,
+      6232
+    ],
+    "godotPids": [
+      6232
+    ],
+    "children": [
+      {
+        "ProcessId": 8288,
+        "ParentProcessId": 6668,
+        "Name": "msedgewebview2.exe",
+        "CommandLine": "\"C:\\Program Files (x86)\\Microsoft\\EdgeWebView\\Application\\153.0.4234.48\\msedgewebview2.exe\" --embedded-browser-webview=1 --webview-exe-name=npm.exe --webview-exe-version=0.1.0 --user-data-dir=\"D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\msi-runtime\\webview\\EBWebView\" --noerrdialogs --embedded-browser-webview-dpi-awareness=2 --autoplay-policy=no-user-gesture-required --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --remote-allow-origins=http://127.0.0.1:51699 --remote-debugging-port=51699 --lang=en-US --mojo-named-platform-channel-pipe=6668.7912.2396957071916788230 /pfhostedapp:3c8d0bd535edcb1741295840431948fff9a667e2"
+      },
+      {
+        "ProcessId": 1572,
+        "ParentProcessId": 6668,
+        "Name": "server.exe",
+        "CommandLine": "\"\\\\?\\D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\MSI installed\\server.exe\""
+      },
+      {
+        "ProcessId": 6232,
+        "ParentProcessId": 6668,
+        "Name": "godot.exe",
+        "CommandLine": "\"D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\MSI installed\\godot.exe\" --main-pack \"\\\\?\\D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\MSI installed\\path_mode.pck\" --nc-start-hidden --minimized"
+      }
+    ]
+  },
+  "pathMode": {
+    "windows": [
+      {
+        "processId": 6232,
+        "handle": 66072,
+        "title": "NoteConnection Path Renderer (DEBUG)",
+        "visible": true
+      },
+      {
+        "processId": 6668,
+        "handle": 196960,
+        "title": "NoteConnection",
+        "visible": false
+      }
+    ],
+    "appPid": 6668,
+    "childPids": [
+      8288,
+      1572,
+      6232
+    ],
+    "godotPids": [
+      6232
+    ],
+    "children": [
+      {
+        "ProcessId": 8288,
+        "ParentProcessId": 6668,
+        "Name": "msedgewebview2.exe",
+        "CommandLine": "\"C:\\Program Files (x86)\\Microsoft\\EdgeWebView\\Application\\153.0.4234.48\\msedgewebview2.exe\" --embedded-browser-webview=1 --webview-exe-name=npm.exe --webview-exe-version=0.1.0 --user-data-dir=\"D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\msi-runtime\\webview\\EBWebView\" --noerrdialogs --embedded-browser-webview-dpi-awareness=2 --autoplay-policy=no-user-gesture-required --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --remote-allow-origins=http://127.0.0.1:51699 --remote-debugging-port=51699 --lang=en-US --mojo-named-platform-channel-pipe=6668.7912.2396957071916788230 /pfhostedapp:3c8d0bd535edcb1741295840431948fff9a667e2"
+      },
+      {
+        "ProcessId": 1572,
+        "ParentProcessId": 6668,
+        "Name": "server.exe",
+        "CommandLine": "\"\\\\?\\D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\MSI installed\\server.exe\""
+      },
+      {
+        "ProcessId": 6232,
+        "ParentProcessId": 6668,
+        "Name": "godot.exe",
+        "CommandLine": "\"D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\MSI installed\\godot.exe\" --main-pack \"\\\\?\\D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\MSI installed\\path_mode.pck\" --nc-start-hidden --minimized"
+      }
+    ]
+  },
+  "capture": {
+    "success": true,
+    "titleFilter": "NoteConnection Path Renderer",
+    "matchIndex": 0,
+    "activateWindow": false,
+    "screenshotPath": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\msi-runtime\\native-godot.png",
+    "capturedAt": "2026-10-01T05:10:52.6849289+00:00",
+    "window": {
+      "title": "NoteConnection Path Renderer (DEBUG)",
+      "processId": 6232,
+      "left": -8,
+      "top": -31,
+      "right": 1032,
+      "bottom": 753,
+      "width": 1040,
+      "height": 784,
+      "usedPrintWindow": true
+    },
+    "process": {
+      "name": "godot.exe",
+      "parentProcessId": 6668,
+      "executablePath": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\MSI installed\\godot.exe",
+      "commandLine": "\"D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\MSI installed\\godot.exe\" --main-pack \"\\\\?\\D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\MSI installed\\path_mode.pck\" --nc-start-hidden --minimized"
+    },
+    "matchedWindows": [
+      {
+        "title": "NoteConnection Path Renderer (DEBUG)",
+        "processId": 6232,
+        "left": -8,
+        "top": -31,
+        "right": 1032,
+        "bottom": 753
+      }
+    ]
+  },
+  "exitTrigger": "frontend-pathApp-exitPathMode",
+  "restored": {
+    "windows": [
+      {
+        "processId": 6668,
+        "handle": 196960,
+        "title": "NoteConnection",
+        "visible": true
+      },
+      {
+        "processId": 6232,
+        "handle": 66072,
+        "title": "NoteConnection Path Renderer (DEBUG)",
+        "visible": false
+      }
+    ],
+    "appPid": 6668,
+    "childPids": [
+      8288,
+      1572,
+      6232
+    ],
+    "godotPids": [
+      6232
+    ],
+    "children": [
+      {
+        "ProcessId": 8288,
+        "ParentProcessId": 6668,
+        "Name": "msedgewebview2.exe",
+        "CommandLine": "\"C:\\Program Files (x86)\\Microsoft\\EdgeWebView\\Application\\153.0.4234.48\\msedgewebview2.exe\" --embedded-browser-webview=1 --webview-exe-name=npm.exe --webview-exe-version=0.1.0 --user-data-dir=\"D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\msi-runtime\\webview\\EBWebView\" --noerrdialogs --embedded-browser-webview-dpi-awareness=2 --autoplay-policy=no-user-gesture-required --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --remote-allow-origins=http://127.0.0.1:51699 --remote-debugging-port=51699 --lang=en-US --mojo-named-platform-channel-pipe=6668.7912.2396957071916788230 /pfhostedapp:3c8d0bd535edcb1741295840431948fff9a667e2"
+      },
+      {
+        "ProcessId": 1572,
+        "ParentProcessId": 6668,
+        "Name": "server.exe",
+        "CommandLine": "\"\\\\?\\D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\MSI installed\\server.exe\""
+      },
+      {
+        "ProcessId": 6232,
+        "ParentProcessId": 6668,
+        "Name": "godot.exe",
+        "CommandLine": "\"D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\MSI installed\\godot.exe\" --main-pack \"\\\\?\\D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36817551883-1\\MSI installed\\path_mode.pck\" --nc-start-hidden --minimized"
+      }
+    ]
+  },
+  "close": {
+    "applicationProcessId": 6668,
+    "closePosted": true
+  },
+  "afterShutdown": {
+    "windows": [],
+    "appPid": 6668,
+    "childPids": [],
+    "godotPids": [],
+    "children": []
+  },
+  "exitCode": 0,
+  "webviewErrors": [
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: net::ERR_CONNECTION_REFUSED\",\"timestamp\":1790831414339.728,\"url\":\"http://127.0.0.1:61796/api/frontend/settings\",\"networkRequestId\":\"5364.93\"}}}",
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: net::ERR_CONNECTION_REFUSED\",\"timestamp\":1790831414510.438,\"url\":\"http://127.0.0.1:61796/api/kb-path?v=1790831414487\",\"networkRequestId\":\"5364.112\"}}}",
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: net::ERR_CONNECTION_REFUSED\",\"timestamp\":1790831415059.893,\"url\":\"http://127.0.0.1:61796/api/frontend/settings\",\"networkRequestId\":\"5364.114\"}}}",
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: net::ERR_CONNECTION_REFUSED\",\"timestamp\":1790831415061.881,\"url\":\"http://127.0.0.1:61796/api/kb-path?v=1790831415042\",\"networkRequestId\":\"5364.115\"}}}",
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: net::ERR_CONNECTION_REFUSED\",\"timestamp\":1790831415351.889,\"url\":\"http://127.0.0.1:61796/api/kb-path?v=1790831415198\",\"networkRequestId\":\"5364.116\"}}}",
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: net::ERR_CONNECTION_REFUSED\",\"timestamp\":1790831415447.222,\"url\":\"http://127.0.0.1:61796/api/frontend/settings\",\"networkRequestId\":\"5364.117\"}}}",
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: net::ERR_CONNECTION_REFUSED\",\"timestamp\":1790831415555.306,\"url\":\"http://127.0.0.1:61796/api/kb-path?v=1790831415532\",\"networkRequestId\":\"5364.118\"}}}",
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: net::ERR_CONNECTION_REFUSED\",\"timestamp\":1790831415799.349,\"url\":\"http://127.0.0.1:61796/api/kb-path?v=1790831415796\",\"networkRequestId\":\"5364.119\"}}}",
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: net::ERR_CONNECTION_REFUSED\",\"timestamp\":1790831415990.332,\"url\":\"http://127.0.0.1:61796/api/frontend/settings\",\"networkRequestId\":\"5364.120\"}}}",
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: net::ERR_CONNECTION_REFUSED\",\"timestamp\":1790831416107.777,\"url\":\"http://127.0.0.1:61796/api/kb-path?v=1790831416104\",\"networkRequestId\":\"5364.121\"}}}",
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 404 (Not Found)\",\"timestamp\":1790831416495.575,\"url\":\"http://127.0.0.1:61796/data.js?v=1790831416489\",\"networkRequestId\":\"5364.126\"}}}",
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 404 (Not Found)\",\"timestamp\":1790831416503.814,\"url\":\"http://127.0.0.1:61796/data.js?v=1790831416496\",\"networkRequestId\":\"5364.128\"}}}",
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 404 (Not Found)\",\"timestamp\":1790831417023.871,\"url\":\"http://127.0.0.1:61796/data.js?v=1790831416616\",\"networkRequestId\":\"5364.129\"}}}",
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 404 (Not Found)\",\"timestamp\":1790831417242.5,\"url\":\"http://127.0.0.1:61796/data.js?v=1790831417225\",\"networkRequestId\":\"5364.131\"}}}",
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 404 (Not Found)\",\"timestamp\":1790831417872.437,\"url\":\"http://127.0.0.1:61796/data.js?v=1790831417846\",\"networkRequestId\":\"5364.132\"}}}",
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 404 (Not Found)\",\"timestamp\":1790831418278.962,\"url\":\"http://127.0.0.1:61796/data.js?v=1790831418273\",\"networkRequestId\":\"5364.133\"}}}",
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 404 (Not Found)\",\"timestamp\":1790831418785.195,\"url\":\"http://127.0.0.1:61796/data.js?v=1790831418780\",\"networkRequestId\":\"5364.134\"}}}",
+    "{\"method\":\"Log.entryAdded\",\"params\":{\"entry\":{\"source\":\"network\",\"level\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 404 (Not Found)\",\"timestamp\":1790831419567.185,\"url\":\"http://127.0.0.1:61796/data.js?v=1790831419556\",\"networkRequestId\":\"5364.135\"}}}"
+  ],
+  "passed": true
+}

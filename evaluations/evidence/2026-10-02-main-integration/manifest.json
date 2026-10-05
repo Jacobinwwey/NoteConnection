@@ -1,0 +1,152 @@
+{
+  "sourceRevision": "8a7296c99387932e00ce14a7372847017ad26be0",
+  "installerRunId": "36963202337",
+  "scope": "Main integration; unsigned Windows installer behavior only.",
+  "entries": [
+    {
+      "path": "workflows.json",
+      "bytes": 1581,
+      "sha256": "418fe5693d2ac2aa51739c1278f0d5a1ae7dea975540ffda5cc4a83df605f204"
+    },
+    {
+      "path": "msi/windows-installer-build.json",
+      "bytes": 2298,
+      "sha256": "70e6d2412a3dc8fda9fc2a685cd1861acb7479382eff11f6d15e7edd46184edc"
+    },
+    {
+      "path": "msi/windows-installers/36963202337-1/msi-install-detail.log.gz",
+      "bytes": 12590,
+      "sha256": "22ad42f8e6dbce0ef61d76ea1e1f5be15478594f628d1b3e629b3d8f18e7aa9d"
+    },
+    {
+      "path": "msi/windows-installers/36963202337-1/msi-install.log.gz",
+      "bytes": 20,
+      "sha256": "9e72928e7a01615b4cf090daa617b4ca9d68531748f887f323f695eb4ca3ef63"
+    },
+    {
+      "path": "msi/windows-installers/36963202337-1/msi-runtime/native-commands.log.gz",
+      "bytes": 202,
+      "sha256": "641592dc126537ae1d808de2766861d3c5e17bb4eff38702f4c6e68f725b3ab0"
+    },
+    {
+      "path": "msi/windows-installers/36963202337-1/msi-runtime/native-debug-policy.json",
+      "bytes": 370,
+      "sha256": "58a3df8a8a5b4a31c0c5971b0d3e0f1d41c1ee86bee47730e69678c8de3ad7e2"
+    },
+    {
+      "path": "msi/windows-installers/36963202337-1/msi-runtime/native-godot.json",
+      "bytes": 1817,
+      "sha256": "1f2bc604c1f9d9633e32d81fa11ac6238080a3c84d1531f76f36b62f13bdc8d9"
+    },
+    {
+      "path": "msi/windows-installers/36963202337-1/msi-runtime/native-godot.png",
+      "bytes": 127502,
+      "sha256": "1c7f0e7183e59bb14057b4db5f18fc8ced1bf443fd73c68503b9f068602c9ec9"
+    },
+    {
+      "path": "msi/windows-installers/36963202337-1/msi-runtime/native-graph.png",
+      "bytes": 463998,
+      "sha256": "7c2bb618cdfc7c34893abc8a8e765aeaa28e1b4df54e24d351d8820a0f2477d5"
+    },
+    {
+      "path": "msi/windows-installers/36963202337-1/msi-runtime/native-restored.png",
+      "bytes": 44217,
+      "sha256": "a191a0b033c670fa232e35ccc9d2b4f9caf91f81942b64c3cf9d6e78ce1c1646"
+    },
+    {
+      "path": "msi/windows-installers/36963202337-1/msi-runtime/native.log.gz",
+      "bytes": 3746,
+      "sha256": "b8ffb8baa2e302bd621ae3e27c299bcb78ecf8c85e526698f1ab40870d26a31b"
+    },
+    {
+      "path": "msi/windows-installers/36963202337-1/msi-runtime/report.json",
+      "bytes": 11811,
+      "sha256": "319453446a57ea10eabbc2e117b3ee15c45fb0f87b41a87f0b82e40987f17fe5"
+    },
+    {
+      "path": "msi/windows-installers/36963202337-1/msi-runtime.log.gz",
+      "bytes": 1662,
+      "sha256": "82ed024909785f21ce9e3e87a8052baf4f9e6f479cfac65ec7f4921892b362c8"
+    },
+    {
+      "path": "msi/windows-installers/36963202337-1/msi-uninstall-detail.log.gz",
+      "bytes": 11352,
+      "sha256": "aca24a7e4d41f3c8a3d889a98005f98bd340d530a83e04c9c5fee91e228fceb5"
+    },
+    {
+      "path": "msi/windows-installers/36963202337-1/msi-uninstall.log.gz",
+      "bytes": 20,
+      "sha256": "9e72928e7a01615b4cf090daa617b4ca9d68531748f887f323f695eb4ca3ef63"
+    },
+    {
+      "path": "msi/windows-installers/36963202337-1/report.json",
+      "bytes": 4094,
+      "sha256": "6232227576a182cf8f4e8c3c16613c3006e26682946d9c206aed649eed0c2228"
+    },
+    {
+      "path": "nsis/windows-installer-build.json",
+      "bytes": 2300,
+      "sha256": "d2057a6eb376c09f892aaf56c76addb43c1f4f91299a18d45df52f75f45e2e7c"
+    },
+    {
+      "path": "nsis/windows-installers/36963202337-1/nsis-install.log.gz",
+      "bytes": 20,
+      "sha256": "9e72928e7a01615b4cf090daa617b4ca9d68531748f887f323f695eb4ca3ef63"
+    },
+    {
+      "path": "nsis/windows-installers/36963202337-1/nsis-runtime/native-commands.log.gz",
+      "bytes": 200,
+      "sha256": "977580c740abc698e12600d255b173356399cc08ca9fdae19c0c59bac690b53f"
+    },
+    {
+      "path": "nsis/windows-installers/36963202337-1/nsis-runtime/native-debug-policy.json",
+      "bytes": 370,
+      "sha256": "e32eaac1f2ea27cd53dab9e7a6821be67d285557c5c24e8bbabc3cf13daa682a"
+    },
+    {
+      "path": "nsis/windows-installers/36963202337-1/nsis-runtime/native-godot.json",
+      "bytes": 1821,
+      "sha256": "bb9a41c61858391f7b143fc9f50de83b00c23d735191748adc72c1fb4c0a49b1"
+    },
+    {
+      "path": "nsis/windows-installers/36963202337-1/nsis-runtime/native-godot.png",
+      "bytes": 140626,
+      "sha256": "d17d8ec65224a43ecd182ee5343b4e42b6d4bbb6087e91f9a6d38e6c49a7e454"
+    },
+    {
+      "path": "nsis/windows-installers/36963202337-1/nsis-runtime/native-graph.png",
+      "bytes": 463192,
+      "sha256": "34ba4c2b304ccfe7fce94200d7668aee0779f7bd6cc347fd94ea8e70c4692c98"
+    },
+    {
+      "path": "nsis/windows-installers/36963202337-1/nsis-runtime/native-restored.png",
+      "bytes": 43833,
+      "sha256": "fcea0419ae23c5f0e91f63fe1a65947a503e93cfe182631ceb63c90c79e9d19c"
+    },
+    {
+      "path": "nsis/windows-installers/36963202337-1/nsis-runtime/native.log.gz",
+      "bytes": 3884,
+      "sha256": "2bf3deea26cc340bc1954d9f2f0a1dc149d0ff0fe35151e7b5dee341a9c2a1b0"
+    },
+    {
+      "path": "nsis/windows-installers/36963202337-1/nsis-runtime/report.json",
+      "bytes": 12070,
+      "sha256": "0326e5941aad52cf9d290385b257cac35c8b97ac224deda01015b069ea3665f8"
+    },
+    {
+      "path": "nsis/windows-installers/36963202337-1/nsis-runtime.log.gz",
+      "bytes": 1725,
+      "sha256": "7abf1e3f87bf9ef8f42c8d4b255513a0bbc1fbf985fce864da4a4e6862dae025"
+    },
+    {
+      "path": "nsis/windows-installers/36963202337-1/nsis-uninstall.log.gz",
+      "bytes": 20,
+      "sha256": "9e72928e7a01615b4cf090daa617b4ca9d68531748f887f323f695eb4ca3ef63"
+    },
+    {
+      "path": "nsis/windows-installers/36963202337-1/report.json",
+      "bytes": 4077,
+      "sha256": "2213263bd73ca9cbe9da2222e7b8304a13f2876cd59b5c4176970ce7e5880ab0"
+    }
+  ]
+}

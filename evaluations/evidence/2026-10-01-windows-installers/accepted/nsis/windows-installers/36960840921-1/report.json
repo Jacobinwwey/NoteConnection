@@ -1,0 +1,129 @@
+{
+  "generatedAt": "2026-10-02T03:48:50.213Z",
+  "sourceRevision": "129443f361fc42831f0f1371ab3066fbcdac69f5",
+  "runId": "36960840921",
+  "runAttempt": "1",
+  "buildRunAttempt": "1",
+  "sourceFingerprint": {
+    "algorithm": "sha256",
+    "version": 2,
+    "digest": "081ab2b7fc4cbbf557df5e82aac3b920f8f6797149a87dfafeb6b48a22cc4d9d",
+    "fileCount": 595
+  },
+  "expectedFiles": {
+    "nsis": [
+      {
+        "name": "npm.exe",
+        "bytes": 17652736,
+        "sha256": "adbdfbec578ca11ae631704c597b3ac93a635243f9c4c02a3b4c17f18118edad"
+      },
+      {
+        "name": "server.exe",
+        "bytes": 77904640,
+        "sha256": "9db45bd96c4fae4b49781cd15d60c86bfe8da4e1c6cae14bf97ba08046544186"
+      },
+      {
+        "name": "godot.exe",
+        "bytes": 171924488,
+        "sha256": "63913d01be2c2d1f929b4a626f5347117126b34e9c64cbf350ea9f35a9657ebf"
+      },
+      {
+        "name": "markdown-worker.exe",
+        "bytes": 1878528,
+        "sha256": "e133d28578e5d1779d7b8438e90c4d36560610214fcf7fbc03ca527221fe4adc"
+      },
+      {
+        "name": "path_mode.pck",
+        "bytes": 311164,
+        "sha256": "9ab1a9e23afda3d4820afc07f2765cd9460193a2f7352490d7a8cd852ce46cb3"
+      }
+    ],
+    "msi": [
+      {
+        "name": "npm.exe",
+        "bytes": 17652736,
+        "sha256": "766fdffddd506d37753799e03d0cf9e0409c1f823e485c25dbc34c67f36b29ad"
+      },
+      {
+        "name": "server.exe",
+        "bytes": 77904640,
+        "sha256": "9db45bd96c4fae4b49781cd15d60c86bfe8da4e1c6cae14bf97ba08046544186"
+      },
+      {
+        "name": "godot.exe",
+        "bytes": 171924488,
+        "sha256": "63913d01be2c2d1f929b4a626f5347117126b34e9c64cbf350ea9f35a9657ebf"
+      },
+      {
+        "name": "markdown-worker.exe",
+        "bytes": 1878528,
+        "sha256": "e133d28578e5d1779d7b8438e90c4d36560610214fcf7fbc03ca527221fe4adc"
+      },
+      {
+        "name": "path_mode.pck",
+        "bytes": 311164,
+        "sha256": "9ab1a9e23afda3d4820afc07f2765cd9460193a2f7352490d7a8cd852ce46cb3"
+      }
+    ]
+  },
+  "signingScope": "Installer behavior only; signing trust is not qualified.",
+  "nsis": {
+    "installer": "D:\\a\\NoteConnection\\NoteConnection\\src-tauri\\target\\release\\bundle\\nsis\\NoteConnection_1.8.0_x64-setup.exe",
+    "installerSha256": "222f5ccfbfc563beeb8c8a0175be5ec83482ac5dc56b5bd51824ed7d5c985886",
+    "installDirectory": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36960840921-1\\NSIS installed",
+    "install": {
+      "exitCode": 0,
+      "rebootRequested": false
+    },
+    "payload": [
+      {
+        "name": "npm.exe",
+        "bytes": 17652736,
+        "sha256": "adbdfbec578ca11ae631704c597b3ac93a635243f9c4c02a3b4c17f18118edad"
+      },
+      {
+        "name": "server.exe",
+        "bytes": 77904640,
+        "sha256": "9db45bd96c4fae4b49781cd15d60c86bfe8da4e1c6cae14bf97ba08046544186"
+      },
+      {
+        "name": "godot.exe",
+        "bytes": 171924488,
+        "sha256": "63913d01be2c2d1f929b4a626f5347117126b34e9c64cbf350ea9f35a9657ebf"
+      },
+      {
+        "name": "markdown-worker.exe",
+        "bytes": 1878528,
+        "sha256": "e133d28578e5d1779d7b8438e90c4d36560610214fcf7fbc03ca527221fe4adc"
+      },
+      {
+        "name": "path_mode.pck",
+        "bytes": 311164,
+        "sha256": "9ab1a9e23afda3d4820afc07f2765cd9460193a2f7352490d7a8cd852ce46cb3"
+      }
+    ],
+    "registrations": [
+      {
+        "PSChildName": "NoteConnection",
+        "DisplayName": "NoteConnection",
+        "DisplayVersion": "1.8.0",
+        "InstallLocation": "\"D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36960840921-1\\NSIS installed\""
+      }
+    ],
+    "runtime": {
+      "report": "output/verification/windows-installers/36960840921-1/nsis-runtime/report.json",
+      "passed": true
+    },
+    "uninstall": {
+      "exitCode": 0,
+      "rebootRequested": false
+    },
+    "removal": {
+      "payloadRemoved": true,
+      "registrationRemoved": true,
+      "runtimeDataPreserved": true
+    },
+    "passed": true
+  },
+  "passed": true
+}

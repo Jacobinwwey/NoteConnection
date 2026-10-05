@@ -1,0 +1,35 @@
+{
+  "success": true,
+  "titleFilter": "NoteConnection Path Renderer",
+  "matchIndex": 0,
+  "activateWindow": false,
+  "screenshotPath": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\desktop-reload-runtime-local-2026-10-01\\native-godot.png",
+  "capturedAt": "2026-10-01T13:57:06.2440327+08:00",
+  "window": {
+    "title": "NoteConnection Path Renderer (DEBUG)",
+    "processId": 21248,
+    "left": 1234,
+    "top": 390,
+    "right": 2606,
+    "bottom": 1796,
+    "width": 1372,
+    "height": 1406,
+    "usedPrintWindow": true
+  },
+  "process": {
+    "name": "godot.exe",
+    "parentProcessId": 43516,
+    "executablePath": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\CI app with spaces\\godot.exe",
+    "commandLine": "\"E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\CI app with spaces\\godot.exe\" --main-pack \"\\\\?\\E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\CI app with spaces\\path_mode.pck\" --nc-start-hidden --minimized"
+  },
+  "matchedWindows": [
+    {
+      "title": "NoteConnection Path Renderer (DEBUG)",
+      "processId": 21248,
+      "left": 1234,
+      "top": 390,
+      "right": 2606,
+      "bottom": 1796
+    }
+  ]
+}

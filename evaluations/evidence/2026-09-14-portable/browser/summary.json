@@ -1,0 +1,87 @@
+[
+  {
+    "case": "agent-answer-formula-render-latest",
+    "capturedAt": "2026-09-13T21:37:40.896Z",
+    "responseMode": "slim",
+    "responseBudgetMode": "adaptive",
+    "sourceDocumentCount": 1,
+    "katexCount": 4,
+    "directTextLength": 339,
+    "messageViewportHeight": 240,
+    "viewport": {
+      "width": 758,
+      "height": 482
+    },
+    "rawMathDelimiterCount": 0,
+    "sourceReportSha256": "1ab854eda3b3dab3c0542143719a67985c6f2504a13ba51311d723cf4bc5fab8",
+    "screenshot": "browser/agent-answer-formula-render-latest.png"
+  },
+  {
+    "case": "agent-answer-formula-render-full-adaptive-latest",
+    "capturedAt": "2026-09-13T21:37:54.183Z",
+    "responseMode": "full",
+    "responseBudgetMode": "adaptive",
+    "sourceDocumentCount": 1,
+    "katexCount": 4,
+    "directTextLength": 339,
+    "messageViewportHeight": 240,
+    "viewport": {
+      "width": 758,
+      "height": 482
+    },
+    "rawMathDelimiterCount": 0,
+    "sourceReportSha256": "aabd8c8ee1238f111c8d481d8be9cd499067d6cc9a57126c5b9a9a4781f49695",
+    "screenshot": "browser/agent-answer-formula-render-full-adaptive-latest.png"
+  },
+  {
+    "case": "agent-answer-real-waterglass-latest",
+    "capturedAt": "2026-09-13T21:38:48.269Z",
+    "responseMode": "slim",
+    "responseBudgetMode": "adaptive",
+    "sourceDocumentCount": 214,
+    "katexCount": 7,
+    "directTextLength": 416,
+    "messageViewportHeight": 240,
+    "viewport": {
+      "width": 758,
+      "height": 482
+    },
+    "rawMathDelimiterCount": 0,
+    "sourceReportSha256": "59cf26d341333822b8fdea56ae376019db3c1bcf711fceed8f623f19d3016d1a",
+    "screenshot": "browser/agent-answer-real-waterglass-latest.png"
+  },
+  {
+    "case": "agent-answer-real-waterglass-full-adaptive-latest",
+    "capturedAt": "2026-09-13T21:39:52.666Z",
+    "responseMode": "full",
+    "responseBudgetMode": "adaptive",
+    "sourceDocumentCount": 214,
+    "katexCount": 86,
+    "directTextLength": 5425,
+    "messageViewportHeight": 240,
+    "viewport": {
+      "width": 758,
+      "height": 482
+    },
+    "rawMathDelimiterCount": 0,
+    "sourceReportSha256": "f4a9c7bf98003da7b3cedb8ca917f2d4be8f85e822a0996fe2e254fa074682b3",
+    "screenshot": "browser/agent-answer-real-waterglass-full-adaptive-latest.png"
+  },
+  {
+    "case": "agent-answer-real-waterglass-full-unbounded-latest",
+    "capturedAt": "2026-09-13T21:40:53.827Z",
+    "responseMode": "full",
+    "responseBudgetMode": "unbounded",
+    "sourceDocumentCount": 214,
+    "katexCount": 86,
+    "directTextLength": 5425,
+    "messageViewportHeight": 240,
+    "viewport": {
+      "width": 758,
+      "height": 482
+    },
+    "rawMathDelimiterCount": 0,
+    "sourceReportSha256": "97231981cb8b94c19a5b9617750ef1d44ea8eaeface4d30213194c5a73728387",
+    "screenshot": "browser/agent-answer-real-waterglass-full-unbounded-latest.png"
+  }
+]

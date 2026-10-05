@@ -1,0 +1,164 @@
+{
+  "ok": true,
+  "errors": [],
+  "warnings": [],
+  "summary": {
+    "checkedAt": "2026-09-13T22:42:03.564Z",
+    "maxAgeHours": 168,
+    "sqlite": {
+      "reportPath": "docs/evaluations/evidence/2026-09-14-portable/ci/run-34786392248/Windows/foundation/foundation-sqlite-runtime-report-2026-09-13T22-24-20-889Z.json",
+      "evidenceCommand": "npm run verify:foundation:sqlite-runtime:release",
+      "minimumReportCount": 3,
+      "reportCount": 3,
+      "reportPaths": [
+        "docs/evaluations/evidence/2026-09-14-portable/ci/run-34786392248/Windows/foundation/foundation-sqlite-runtime-report-2026-09-13T22-23-36-213Z.json",
+        "docs/evaluations/evidence/2026-09-14-portable/ci/run-34786392248/Windows/foundation/foundation-sqlite-runtime-report-2026-09-13T22-24-20-889Z.json",
+        "docs/evaluations/evidence/2026-09-14-portable/ci/run-34786392248/Windows/foundation/foundation-sqlite-runtime-report-2026-09-13T22-22-51-210Z.json"
+      ],
+      "minimumHostCount": 1,
+      "hostCount": 1,
+      "hostKeys": [
+        "5cf55e2a0ebb751bda6eee62"
+      ],
+      "verifiedAt": "2026-09-13T22:24:20.889Z",
+      "ageHours": 0.2952,
+      "maxAgeHours": 168,
+      "suiteKind": "soak",
+      "soakCycles": 5,
+      "requiredProfiles": [
+        "heavy"
+      ],
+      "profileRuns": [
+        {
+          "profileId": "heavy",
+          "modes": [
+            {
+              "mode": "dist_node_runtime",
+              "gateCount": 8,
+              "failedGateIds": [],
+              "restartCycleCount": 5,
+              "querySampleCount": 24
+            },
+            {
+              "mode": "packaged_sidecar",
+              "gateCount": 8,
+              "failedGateIds": [],
+              "restartCycleCount": 5,
+              "querySampleCount": 24
+            }
+          ]
+        }
+      ]
+    },
+    "ann": {
+      "reportPath": "docs/evaluations/evidence/2026-09-14-portable/ci/run-34786392248/Windows/foundation/foundation-ann-runtime-report-2026-09-13T22-24-42-223Z.json",
+      "evidenceCommand": "npm run verify:foundation:ann-runtime:release",
+      "minimumReportCount": 3,
+      "reportCount": 3,
+      "reportPaths": [
+        "docs/evaluations/evidence/2026-09-14-portable/ci/run-34786392248/Windows/foundation/foundation-ann-runtime-report-2026-09-13T22-24-42-223Z.json",
+        "docs/evaluations/evidence/2026-09-14-portable/ci/run-34786392248/Windows/foundation/foundation-ann-runtime-report-2026-09-13T22-23-57-587Z.json",
+        "docs/evaluations/evidence/2026-09-14-portable/ci/run-34786392248/Windows/foundation/foundation-ann-runtime-report-2026-09-13T22-23-12-712Z.json"
+      ],
+      "minimumHostCount": 1,
+      "hostCount": 1,
+      "hostKeys": [
+        "5cf55e2a0ebb751bda6eee62"
+      ],
+      "verifiedAt": "2026-09-13T22:24:42.223Z",
+      "ageHours": 0.2893,
+      "maxAgeHours": 168,
+      "suiteKind": "matrix",
+      "releaseGatesEnabled": true,
+      "minExpectedRecall": 1,
+      "requiredProfiles": [
+        "smoke",
+        "medium",
+        "heavy"
+      ],
+      "profileRuns": [
+        {
+          "profileId": "smoke",
+          "modes": [
+            {
+              "mode": "dist_node_runtime",
+              "gateCount": 6,
+              "failedGateIds": [],
+              "expectedRecall": {
+                "expectedQueryCount": 6,
+                "matchedQueryCount": 6,
+                "ratio": 1
+              },
+              "querySampleCount": 8
+            },
+            {
+              "mode": "packaged_sidecar",
+              "gateCount": 6,
+              "failedGateIds": [],
+              "expectedRecall": {
+                "expectedQueryCount": 6,
+                "matchedQueryCount": 6,
+                "ratio": 1
+              },
+              "querySampleCount": 8
+            }
+          ]
+        },
+        {
+          "profileId": "medium",
+          "modes": [
+            {
+              "mode": "dist_node_runtime",
+              "gateCount": 6,
+              "failedGateIds": [],
+              "expectedRecall": {
+                "expectedQueryCount": 6,
+                "matchedQueryCount": 6,
+                "ratio": 1
+              },
+              "querySampleCount": 8
+            },
+            {
+              "mode": "packaged_sidecar",
+              "gateCount": 6,
+              "failedGateIds": [],
+              "expectedRecall": {
+                "expectedQueryCount": 6,
+                "matchedQueryCount": 6,
+                "ratio": 1
+              },
+              "querySampleCount": 8
+            }
+          ]
+        },
+        {
+          "profileId": "heavy",
+          "modes": [
+            {
+              "mode": "dist_node_runtime",
+              "gateCount": 6,
+              "failedGateIds": [],
+              "expectedRecall": {
+                "expectedQueryCount": 6,
+                "matchedQueryCount": 6,
+                "ratio": 1
+              },
+              "querySampleCount": 8
+            },
+            {
+              "mode": "packaged_sidecar",
+              "gateCount": 6,
+              "failedGateIds": [],
+              "expectedRecall": {
+                "expectedQueryCount": 6,
+                "matchedQueryCount": 6,
+                "ratio": 1
+              },
+              "querySampleCount": 8
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

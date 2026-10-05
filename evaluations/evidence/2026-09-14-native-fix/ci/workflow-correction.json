@@ -1,0 +1,807 @@
+{
+  "recordedAt": "2026-09-13T20:30:29.563Z",
+  "sourceRevision": "8564294bc6757e6ea2a18e06ba482f5a618a95ad",
+  "initialMainRevision": "be2eed37bc978ddecf6b1258cf63051ee7de8e5f",
+  "initialRuns": {
+    "migration": {
+      "id": 34779600029,
+      "conclusion": "success"
+    },
+    "fixrisk": {
+      "id": 34779599974,
+      "conclusion": "failure"
+    },
+    "foundation": {
+      "id": 34779817801,
+      "windows": "failure_missing_Godot_after_server_build",
+      "linux": "success"
+    }
+  },
+  "before": {
+    "id": "FR-010",
+    "status": "verification-failed",
+    "codeStatus": "verification-failed",
+    "operationalStatus": "cleared",
+    "pendingReason": null,
+    "checks": [
+      {
+        "name": "Workflow files discovered",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "docs-diataxis-site.yml, docs-github-pages-publish.yml, fixrisk-operational-readiness.yml, foundation-runtime-qualification.yml, migration-gates.yml, mobile-e2e-detox-contracts.yml, npm-publish.yml, release-desktop-multi-os.yml, version-check.yml, wasm-parity-benchmark-snapshots.yml"
+      },
+      {
+        "name": "docs-diataxis-site.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "docs-diataxis-site.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "docs-diataxis-site.yml: setup-node pins Node 24 baseline",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "node-version values: 24"
+      },
+      {
+        "name": "docs-diataxis-site.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "docs-github-pages-publish.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "docs-github-pages-publish.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "docs-github-pages-publish.yml: setup-node pins Node 24 baseline",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "node-version values: 24"
+      },
+      {
+        "name": "docs-github-pages-publish.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "fixrisk-operational-readiness.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "fixrisk-operational-readiness.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "fixrisk-operational-readiness.yml: setup-node pins Node 24 baseline",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "node-version values: 24, 24, 24"
+      },
+      {
+        "name": "fixrisk-operational-readiness.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "foundation-runtime-qualification.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "foundation-runtime-qualification.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "foundation-runtime-qualification.yml: setup-node pins Node 24 baseline",
+        "ok": false,
+        "command": null,
+        "exitCode": 1,
+        "durationMs": 0,
+        "detail": "Expected all setup-node node-version values to resolve to 24, found: 22.19"
+      },
+      {
+        "name": "foundation-runtime-qualification.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "migration-gates.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "migration-gates.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "migration-gates.yml: setup-node pins Node 24 baseline",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "node-version values: 24, 24, 24, 24"
+      },
+      {
+        "name": "migration-gates.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "mobile-e2e-detox-contracts.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "mobile-e2e-detox-contracts.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "mobile-e2e-detox-contracts.yml: setup-node pins Node 24 baseline",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "node-version values: 24"
+      },
+      {
+        "name": "mobile-e2e-detox-contracts.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "npm-publish.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "npm-publish.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "npm-publish.yml: setup-node pins Node 24 baseline",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "node-version values: 24"
+      },
+      {
+        "name": "npm-publish.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "release-desktop-multi-os.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "release-desktop-multi-os.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "release-desktop-multi-os.yml: setup-node pins Node 24 baseline",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "node-version values: 24, 24, 24, 24"
+      },
+      {
+        "name": "release-desktop-multi-os.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "version-check.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "version-check.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "wasm-parity-benchmark-snapshots.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "wasm-parity-benchmark-snapshots.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "wasm-parity-benchmark-snapshots.yml: setup-node pins Node 24 baseline",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "node-version values: 24"
+      },
+      {
+        "name": "wasm-parity-benchmark-snapshots.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "EN issue row FR-010 present",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "Closed"
+      },
+      {
+        "name": "ZH issue row FR-010 present",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "Closed"
+      },
+      {
+        "name": "EN/ZH status marker parity FR-010",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "EN=Closed (closed) | ZH=Closed (closed)"
+      }
+    ],
+    "verification": [
+      "PASS Workflow files discovered: docs-diataxis-site.yml, docs-github-pages-publish.yml, fixrisk-operational-readiness.yml, foundation-runtime-qualification.yml, migration-gates.yml, mobile-e2e-detox-contracts.yml, npm-publish.yml, release-desktop-multi-os.yml, version-check.yml, wasm-parity-benchmark-snapshots.yml",
+      "PASS docs-diataxis-site.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS docs-diataxis-site.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "PASS docs-diataxis-site.yml: setup-node pins Node 24 baseline: node-version values: 24",
+      "PASS docs-diataxis-site.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS docs-github-pages-publish.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS docs-github-pages-publish.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "PASS docs-github-pages-publish.yml: setup-node pins Node 24 baseline: node-version values: 24",
+      "PASS docs-github-pages-publish.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS fixrisk-operational-readiness.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS fixrisk-operational-readiness.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "PASS fixrisk-operational-readiness.yml: setup-node pins Node 24 baseline: node-version values: 24, 24, 24",
+      "PASS fixrisk-operational-readiness.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS foundation-runtime-qualification.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS foundation-runtime-qualification.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "FAIL foundation-runtime-qualification.yml: setup-node pins Node 24 baseline: Expected all setup-node node-version values to resolve to 24, found: 22.19",
+      "PASS foundation-runtime-qualification.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS migration-gates.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS migration-gates.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "PASS migration-gates.yml: setup-node pins Node 24 baseline: node-version values: 24, 24, 24, 24",
+      "PASS migration-gates.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS mobile-e2e-detox-contracts.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS mobile-e2e-detox-contracts.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "PASS mobile-e2e-detox-contracts.yml: setup-node pins Node 24 baseline: node-version values: 24",
+      "PASS mobile-e2e-detox-contracts.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS npm-publish.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS npm-publish.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "PASS npm-publish.yml: setup-node pins Node 24 baseline: node-version values: 24",
+      "PASS npm-publish.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS release-desktop-multi-os.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS release-desktop-multi-os.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "PASS release-desktop-multi-os.yml: setup-node pins Node 24 baseline: node-version values: 24, 24, 24, 24",
+      "PASS release-desktop-multi-os.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS version-check.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS version-check.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS wasm-parity-benchmark-snapshots.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS wasm-parity-benchmark-snapshots.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "PASS wasm-parity-benchmark-snapshots.yml: setup-node pins Node 24 baseline: node-version values: 24",
+      "PASS wasm-parity-benchmark-snapshots.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS EN issue row FR-010 present: Closed",
+      "PASS ZH issue row FR-010 present: Closed",
+      "PASS EN/ZH status marker parity FR-010: EN=Closed (closed) | ZH=Closed (closed)"
+    ],
+    "passedChecks": 41,
+    "totalChecks": 42
+  },
+  "after": {
+    "id": "FR-010",
+    "status": "verified-closed",
+    "codeStatus": "verified-closed",
+    "operationalStatus": "cleared",
+    "pendingReason": null,
+    "checks": [
+      {
+        "name": "Workflow files discovered",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "docs-diataxis-site.yml, docs-github-pages-publish.yml, fixrisk-operational-readiness.yml, foundation-runtime-qualification.yml, migration-gates.yml, mobile-e2e-detox-contracts.yml, npm-publish.yml, release-desktop-multi-os.yml, version-check.yml, wasm-parity-benchmark-snapshots.yml"
+      },
+      {
+        "name": "docs-diataxis-site.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "docs-diataxis-site.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "docs-diataxis-site.yml: setup-node pins Node 24 baseline",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "node-version values: 24"
+      },
+      {
+        "name": "docs-diataxis-site.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "docs-github-pages-publish.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "docs-github-pages-publish.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "docs-github-pages-publish.yml: setup-node pins Node 24 baseline",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "node-version values: 24"
+      },
+      {
+        "name": "docs-github-pages-publish.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "fixrisk-operational-readiness.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "fixrisk-operational-readiness.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "fixrisk-operational-readiness.yml: setup-node pins Node 24 baseline",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "node-version values: 24, 24, 24"
+      },
+      {
+        "name": "fixrisk-operational-readiness.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "foundation-runtime-qualification.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "foundation-runtime-qualification.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "foundation-runtime-qualification.yml: setup-node pins Node 24 baseline",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "node-version values: 24.14"
+      },
+      {
+        "name": "foundation-runtime-qualification.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "migration-gates.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "migration-gates.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "migration-gates.yml: setup-node pins Node 24 baseline",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "node-version values: 24, 24, 24, 24"
+      },
+      {
+        "name": "migration-gates.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "mobile-e2e-detox-contracts.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "mobile-e2e-detox-contracts.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "mobile-e2e-detox-contracts.yml: setup-node pins Node 24 baseline",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "node-version values: 24"
+      },
+      {
+        "name": "mobile-e2e-detox-contracts.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "npm-publish.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "npm-publish.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "npm-publish.yml: setup-node pins Node 24 baseline",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "node-version values: 24"
+      },
+      {
+        "name": "npm-publish.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "release-desktop-multi-os.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "release-desktop-multi-os.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "release-desktop-multi-os.yml: setup-node pins Node 24 baseline",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "node-version values: 24, 24, 24, 24"
+      },
+      {
+        "name": "release-desktop-multi-os.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "version-check.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "version-check.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "wasm-parity-benchmark-snapshots.yml: checkout action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/checkout@v4 configured"
+      },
+      {
+        "name": "wasm-parity-benchmark-snapshots.yml: setup-node action uses v4 (latest)",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "actions/setup-node@v4 configured"
+      },
+      {
+        "name": "wasm-parity-benchmark-snapshots.yml: setup-node pins Node 24 baseline",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "node-version values: 24"
+      },
+      {
+        "name": "wasm-parity-benchmark-snapshots.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "No legacy Node24 transition override present"
+      },
+      {
+        "name": "EN issue row FR-010 present",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "Closed"
+      },
+      {
+        "name": "ZH issue row FR-010 present",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "Closed"
+      },
+      {
+        "name": "EN/ZH status marker parity FR-010",
+        "ok": true,
+        "command": null,
+        "exitCode": 0,
+        "durationMs": 0,
+        "detail": "EN=Closed (closed) | ZH=Closed (closed)"
+      }
+    ],
+    "verification": [
+      "PASS Workflow files discovered: docs-diataxis-site.yml, docs-github-pages-publish.yml, fixrisk-operational-readiness.yml, foundation-runtime-qualification.yml, migration-gates.yml, mobile-e2e-detox-contracts.yml, npm-publish.yml, release-desktop-multi-os.yml, version-check.yml, wasm-parity-benchmark-snapshots.yml",
+      "PASS docs-diataxis-site.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS docs-diataxis-site.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "PASS docs-diataxis-site.yml: setup-node pins Node 24 baseline: node-version values: 24",
+      "PASS docs-diataxis-site.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS docs-github-pages-publish.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS docs-github-pages-publish.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "PASS docs-github-pages-publish.yml: setup-node pins Node 24 baseline: node-version values: 24",
+      "PASS docs-github-pages-publish.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS fixrisk-operational-readiness.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS fixrisk-operational-readiness.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "PASS fixrisk-operational-readiness.yml: setup-node pins Node 24 baseline: node-version values: 24, 24, 24",
+      "PASS fixrisk-operational-readiness.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS foundation-runtime-qualification.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS foundation-runtime-qualification.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "PASS foundation-runtime-qualification.yml: setup-node pins Node 24 baseline: node-version values: 24.14",
+      "PASS foundation-runtime-qualification.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS migration-gates.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS migration-gates.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "PASS migration-gates.yml: setup-node pins Node 24 baseline: node-version values: 24, 24, 24, 24",
+      "PASS migration-gates.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS mobile-e2e-detox-contracts.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS mobile-e2e-detox-contracts.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "PASS mobile-e2e-detox-contracts.yml: setup-node pins Node 24 baseline: node-version values: 24",
+      "PASS mobile-e2e-detox-contracts.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS npm-publish.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS npm-publish.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "PASS npm-publish.yml: setup-node pins Node 24 baseline: node-version values: 24",
+      "PASS npm-publish.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS release-desktop-multi-os.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS release-desktop-multi-os.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "PASS release-desktop-multi-os.yml: setup-node pins Node 24 baseline: node-version values: 24, 24, 24, 24",
+      "PASS release-desktop-multi-os.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS version-check.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS version-check.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS wasm-parity-benchmark-snapshots.yml: checkout action uses v4 (latest): actions/checkout@v4 configured",
+      "PASS wasm-parity-benchmark-snapshots.yml: setup-node action uses v4 (latest): actions/setup-node@v4 configured",
+      "PASS wasm-parity-benchmark-snapshots.yml: setup-node pins Node 24 baseline: node-version values: 24",
+      "PASS wasm-parity-benchmark-snapshots.yml: no FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transition override: No legacy Node24 transition override present",
+      "PASS EN issue row FR-010 present: Closed",
+      "PASS ZH issue row FR-010 present: Closed",
+      "PASS EN/ZH status marker parity FR-010: EN=Closed (closed) | ZH=Closed (closed)"
+    ],
+    "passedChecks": 42,
+    "totalChecks": 42
+  },
+  "workflowCorrection": {
+    "hostNode": "24.14.0",
+    "buildCommand": "node scripts/build-sidecar.js",
+    "scope": "Server SQLite and reference connector qualification; native application qualification is separate."
+  }
+}

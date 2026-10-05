@@ -1,0 +1,22 @@
+{
+  "generatedAt": "2026-09-14T00:24:59.978Z",
+  "sourceRevision": "894ec1d0e083e2eab444ccf1f1e465eeb45b4947",
+  "runId": "34792199163",
+  "runAttempt": "1",
+  "runtime": "tauri-wry-libtest",
+  "platform": "win32",
+  "arch": "x64",
+  "scope": "Native Tauri command and window contracts; release installers and Godot integration require separate qualification.",
+  "artifacts": [
+    {
+      "path": "src-tauri/target/debug/deps/npm_lib-268d820b6fb6bbab.exe",
+      "bytes": 16480256,
+      "sha256": "347ae30d06ca45d396755afc3a51675e17b7404acac59509500895f7a2633565"
+    },
+    {
+      "path": "src-tauri/target/debug/deps/npm_lib-fccd81b26cc17daa.exe",
+      "bytes": 3395072,
+      "sha256": "1a185efac6c1add1a17e456e649abe8285161b2f71f0197718552da2150c50cf"
+    }
+  ]
+}

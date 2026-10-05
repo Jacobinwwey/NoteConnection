@@ -1,0 +1,770 @@
+[
+  {
+    "version": 1,
+    "report": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-root-quality\\regression-v1\\answer-quality-report-2026-09-13T19-07-39-104Z.json",
+    "protocol": "answer-quality-public-surface-v3",
+    "sourceRevision": "8564294bc6757e6ea2a18e06ba482f5a618a95ad",
+    "sourceTreeHash": "880be413ab9a1d0830c50dd53da8c602027a0b0b358c3e37b86f6f7609965244",
+    "complete": true,
+    "groups": [
+      {
+        "split": "calibration",
+        "mode": "slim",
+        "acceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        }
+      },
+      {
+        "split": "calibration",
+        "mode": "full",
+        "acceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        }
+      },
+      {
+        "split": "evaluation",
+        "mode": "slim",
+        "acceptance": {
+          "numerator": 18,
+          "denominator": 18,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 38,
+          "denominator": 38,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 16,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 20,
+          "rate": 0
+        }
+      },
+      {
+        "split": "evaluation",
+        "mode": "full",
+        "acceptance": {
+          "numerator": 18,
+          "denominator": 18,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 38,
+          "denominator": 38,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 16,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 20,
+          "rate": 0
+        }
+      }
+    ],
+    "failed": [],
+    "unstable": []
+  },
+  {
+    "version": 2,
+    "report": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-root-quality\\regression-v2\\answer-quality-report-2026-09-13T19-07-40-623Z.json",
+    "protocol": "answer-quality-public-surface-v3",
+    "sourceRevision": "8564294bc6757e6ea2a18e06ba482f5a618a95ad",
+    "sourceTreeHash": "880be413ab9a1d0830c50dd53da8c602027a0b0b358c3e37b86f6f7609965244",
+    "complete": true,
+    "groups": [
+      {
+        "split": "calibration",
+        "mode": "slim",
+        "acceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        }
+      },
+      {
+        "split": "calibration",
+        "mode": "full",
+        "acceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        }
+      },
+      {
+        "split": "evaluation",
+        "mode": "slim",
+        "acceptance": {
+          "numerator": 18,
+          "denominator": 18,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 36,
+          "denominator": 36,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 16,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 6,
+          "rate": 0
+        }
+      },
+      {
+        "split": "evaluation",
+        "mode": "full",
+        "acceptance": {
+          "numerator": 18,
+          "denominator": 18,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 36,
+          "denominator": 36,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 16,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 6,
+          "rate": 0
+        }
+      }
+    ],
+    "failed": [],
+    "unstable": []
+  },
+  {
+    "version": 3,
+    "report": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-root-quality\\regression-v3\\answer-quality-report-2026-09-13T19-07-42-499Z.json",
+    "protocol": "answer-quality-public-surface-v3",
+    "sourceRevision": "8564294bc6757e6ea2a18e06ba482f5a618a95ad",
+    "sourceTreeHash": "880be413ab9a1d0830c50dd53da8c602027a0b0b358c3e37b86f6f7609965244",
+    "complete": true,
+    "groups": [
+      {
+        "split": "calibration",
+        "mode": "slim",
+        "acceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        }
+      },
+      {
+        "split": "calibration",
+        "mode": "full",
+        "acceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        }
+      },
+      {
+        "split": "evaluation",
+        "mode": "slim",
+        "acceptance": {
+          "numerator": 28,
+          "denominator": 28,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 61,
+          "denominator": 61,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 25,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 3,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 8,
+          "rate": 0
+        }
+      },
+      {
+        "split": "evaluation",
+        "mode": "full",
+        "acceptance": {
+          "numerator": 28,
+          "denominator": 28,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 61,
+          "denominator": 61,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 25,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 3,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 8,
+          "rate": 0
+        }
+      }
+    ],
+    "failed": [],
+    "unstable": []
+  },
+  {
+    "version": 4,
+    "report": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-root-quality\\regression-v4\\answer-quality-report-2026-09-13T19-07-44-073Z.json",
+    "protocol": "answer-quality-public-surface-v3",
+    "sourceRevision": "8564294bc6757e6ea2a18e06ba482f5a618a95ad",
+    "sourceTreeHash": "880be413ab9a1d0830c50dd53da8c602027a0b0b358c3e37b86f6f7609965244",
+    "complete": true,
+    "groups": [
+      {
+        "split": "calibration",
+        "mode": "slim",
+        "acceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        }
+      },
+      {
+        "split": "calibration",
+        "mode": "full",
+        "acceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        }
+      },
+      {
+        "split": "evaluation",
+        "mode": "slim",
+        "acceptance": {
+          "numerator": 22,
+          "denominator": 22,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 48,
+          "denominator": 48,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 20,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 5,
+          "rate": 0
+        }
+      },
+      {
+        "split": "evaluation",
+        "mode": "full",
+        "acceptance": {
+          "numerator": 22,
+          "denominator": 22,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 48,
+          "denominator": 48,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 20,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 5,
+          "rate": 0
+        }
+      }
+    ],
+    "failed": [],
+    "unstable": []
+  },
+  {
+    "version": 5,
+    "report": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-root-quality\\regression-v5\\answer-quality-report-2026-09-13T19-07-45-427Z.json",
+    "protocol": "answer-quality-public-surface-v3",
+    "sourceRevision": "8564294bc6757e6ea2a18e06ba482f5a618a95ad",
+    "sourceTreeHash": "880be413ab9a1d0830c50dd53da8c602027a0b0b358c3e37b86f6f7609965244",
+    "complete": true,
+    "groups": [
+      {
+        "split": "calibration",
+        "mode": "slim",
+        "acceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        }
+      },
+      {
+        "split": "calibration",
+        "mode": "full",
+        "acceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        }
+      },
+      {
+        "split": "evaluation",
+        "mode": "slim",
+        "acceptance": {
+          "numerator": 16,
+          "denominator": 16,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 32,
+          "denominator": 32,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 14,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 1,
+          "rate": 0
+        }
+      },
+      {
+        "split": "evaluation",
+        "mode": "full",
+        "acceptance": {
+          "numerator": 16,
+          "denominator": 16,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 32,
+          "denominator": 32,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 14,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 1,
+          "rate": 0
+        }
+      }
+    ],
+    "failed": [],
+    "unstable": []
+  },
+  {
+    "version": 6,
+    "report": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-root-quality\\regression-v6\\answer-quality-report-2026-09-13T19-07-46-709Z.json",
+    "protocol": "answer-quality-public-surface-v3",
+    "sourceRevision": "8564294bc6757e6ea2a18e06ba482f5a618a95ad",
+    "sourceTreeHash": "880be413ab9a1d0830c50dd53da8c602027a0b0b358c3e37b86f6f7609965244",
+    "complete": true,
+    "groups": [
+      {
+        "split": "calibration",
+        "mode": "slim",
+        "acceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        }
+      },
+      {
+        "split": "calibration",
+        "mode": "full",
+        "acceptance": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0
+        }
+      },
+      {
+        "split": "evaluation",
+        "mode": "slim",
+        "acceptance": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 28,
+          "denominator": 28,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 10,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 0,
+          "rate": null
+        }
+      },
+      {
+        "split": "evaluation",
+        "mode": "full",
+        "acceptance": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1
+        },
+        "facts": {
+          "numerator": 28,
+          "denominator": 28,
+          "rate": 1
+        },
+        "falseConflict": {
+          "numerator": 0,
+          "denominator": 10,
+          "rate": 0
+        },
+        "missedConflict": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0
+        },
+        "unsupported": {
+          "numerator": 0,
+          "denominator": 0,
+          "rate": null
+        }
+      }
+    ],
+    "failed": [],
+    "unstable": []
+  }
+]

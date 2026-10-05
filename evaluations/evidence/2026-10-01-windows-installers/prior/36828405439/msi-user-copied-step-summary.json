@@ -1,0 +1,23 @@
+{
+  "provenance": "User-copied GitHub live step output; summary of supplied JSON, not a downloaded artifact",
+  "url": "https://github.com/Jacobinwwey/NoteConnection/actions/runs/36828405439/job/110260776090",
+  "step": "Install, run and uninstall on an independent runner",
+  "sourceRevision": "5b01b24d01742dbc3324ba530395ced41f8549e7",
+  "runId": "36828405439",
+  "runAttempt": "1",
+  "sourceFingerprint": {
+    "algorithm": "sha256",
+    "version": 2,
+    "digest": "940bd5afd0376274aaa7be26f0248f533e3c28c89bf537b0b70b01d83db65a3d",
+    "fileCount": 594
+  },
+  "installerSha256": "9caece6092cfd76bf3b24600cb1960c584674084f81d5d747aa13221451d6aa0",
+  "installExitCode": 0,
+  "payloadMatchesExpectedFiles": true,
+  "registeredProduct": "{3D1185FC-CEA8-4E4B-AC68-A8DE347E2086}",
+  "runtimePassed": true,
+  "uninstallExitCode": 1603,
+  "uninstallError": "AssertionError [ERR_ASSERTION]: msiexec.exe exited 1603",
+  "passed": false,
+  "limitation": "Detailed MSI uninstall log and uploaded runtime evidence remain unavailable. Exit code 1603 identifies uninstall failure, not its root cause."
+}

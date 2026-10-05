@@ -1,0 +1,43 @@
+{
+  "capturedAt": "2026-09-13T19:17:45.295Z",
+  "mainVisible": true,
+  "events": [
+    {
+      "config": {
+        "confirmBeforeFullShutdownFromGodot": false,
+        "hideTauriWhenPathmodeOpens": true,
+        "restoreTauriWhenPathmodeExits": true,
+        "singleWindowMode": true,
+        "syncLanguage": true
+      },
+      "plan": {
+        "focusTauriMainWindow": false,
+        "hideTauriMainWindow": true,
+        "sendPathmodeHide": false,
+        "sendPathmodeShow": true,
+        "showTauriMainWindow": false
+      },
+      "showGodot": true,
+      "triggeredAtMs": 1789326659868
+    },
+    {
+      "config": {
+        "confirmBeforeFullShutdownFromGodot": false,
+        "hideTauriWhenPathmodeOpens": true,
+        "restoreTauriWhenPathmodeExits": true,
+        "singleWindowMode": true,
+        "syncLanguage": true
+      },
+      "plan": {
+        "focusTauriMainWindow": true,
+        "hideTauriMainWindow": false,
+        "sendPathmodeHide": true,
+        "sendPathmodeShow": false,
+        "showTauriMainWindow": true
+      },
+      "showGodot": false,
+      "triggeredAtMs": 1789327064445
+    }
+  ],
+  "bridgeSocket": 1
+}

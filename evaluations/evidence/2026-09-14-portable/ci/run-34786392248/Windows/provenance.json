@@ -1,0 +1,45 @@
+{
+  "runId": 34786392248,
+  "runAttempt": 1,
+  "runUrl": "https://github.com/Jacobinwwey/NoteConnection/actions/runs/34786392248",
+  "sourceRevision": "1a688f02489cb6b1c566e56f8d11f92d745ea1f8",
+  "sourceTreeHash": "15657ea4ebda7e0eeb7847403d2097abc61b08610431395237a78d2a951b5b94",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "nodeVersion": "v24.14.0",
+    "evidenceHostId": "5cf55e2a0ebb751bda6eee62"
+  },
+  "artifacts": {
+    "dist_node_runtime": {
+      "kind": "sidecar_inputs",
+      "path": "dist/src",
+      "sha256": "719d1f2499fcdce064dabd5ea669978b0d1fbb3ff307370bb80a0db6bd686f15",
+      "sizeBytes": 22365881
+    },
+    "packaged_sidecar": {
+      "kind": "file",
+      "path": "src-tauri/bin/server-x86_64-pc-windows-msvc.exe",
+      "sha256": "bf08708eea0ed04e1ecb1027885b44964c8f6383f8d96df741386176064eca6d",
+      "sizeBytes": 77896769
+    }
+  },
+  "inputManifestDigest": "719d1f2499fcdce064dabd5ea669978b0d1fbb3ff307370bb80a0db6bd686f15",
+  "sqliteRunIds": [
+    "b7f3fa08-3abc-4134-b36a-8a6f9d2a1b2d",
+    "169676db-da2b-46fc-82c4-f57995b2aeda",
+    "5b668cd6-8853-405b-aaff-b324e3a51989"
+  ],
+  "annRunIds": [
+    "9824dec4-6639-4229-81d3-832840be52d1",
+    "6131232b-f3e8-4532-b7d5-5ced432c62ba",
+    "6ca070b2-a0a5-4b3d-bda1-a85c89b08529"
+  ],
+  "offlineVerification": {
+    "ok": true,
+    "warnings": 0,
+    "minReports": 3,
+    "artifactRoot": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\ci-qualification-34786392248\\Windows"
+  },
+  "scope": "Server SQLite and reference token-posting connector; no native-window or production ANN qualification."
+}

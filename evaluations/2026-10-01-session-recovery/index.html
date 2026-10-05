@@ -1,0 +1,2653 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Diataxis-based bilingual documentation for NoteConnection">
+      
+      
+      
+        <link rel="canonical" href="https://jacobinwwey.github.io/NoteConnection/evaluations/2026-10-01-session-recovery/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Interrupted session recovery and installer CI continuation - NoteConnection Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#session-recovery" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="NoteConnection Docs" class="md-header__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NoteConnection Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Interrupted session recovery and installer CI continuation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../2026-09-13-convergence-results/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Convergence Results (2026-09-13)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../2026-09-12-learning-pilot-protocol/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Learning Pilot Protocol
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../audits/2026-09-12-project-progress/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Project Progress Baseline (2026-09-12)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../plans/2026-09-12-001-refactor-project-convergence-plan/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Project Convergence Plan
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Historical Open Goal Audit (2026-05-10)
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../brainstorms/" class="md-tabs__link">
+          
+  
+  
+  Working Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/en/overview/" class="md-tabs__link">
+          
+  
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diataxis/zh/overview/" class="md-tabs__link">
+          
+  
+  
+  中文
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="NoteConnection Docs" class="md-nav__button md-logo" aria-label="NoteConnection Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    NoteConnection Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Jacobinwwey/NoteConnection" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Jacobinwwey/NoteConnection
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2026-09-13-convergence-results/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Convergence Results (2026-09-13)
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--host-accepted-external-gates-open"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2026-09-12-learning-pilot-protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Learning Pilot Protocol
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--awaiting_participants"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../audits/2026-09-12-project-progress/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Progress Baseline (2026-09-12)
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--baseline-audit"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plans/2026-09-12-001-refactor-project-convergence-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Convergence Plan
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--partial_acceptance"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../open_goal_audit_2026-05-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Historical Open Goal Audit (2026-05-10)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Working Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../brainstorms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Brainstorms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../solutions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solutions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_2" id="__nav_8_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_3" id="__nav_8_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and Export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publish Docs to GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Window Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configure app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_4" id="__nav_8_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces and Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Platform Build Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release and Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_5" id="__nav_8_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture and Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS Asset Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar Supply Feasibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Node Update Acceleration Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Mastery Evolution Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/en/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Progress Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diataxis 概览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_2" id="__nav_9_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    教程
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    教程
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/tutorials/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首次运行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_3" id="__nav_9_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    操作指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    操作指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/build-and-export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    构建与导出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/bootstrap-godot-sidecar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    引导 Godot Sidecar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/publish-docs-github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布文档到 GitHub Pages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/single-window-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    单窗口运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/configure-app-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置 app_config.toml
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/how-to/godot-notemd-markdown-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 工作流
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_4" id="__nav_9_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参考
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    参考
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/interfaces-and-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接口与运行时
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/godot-notemd-markdown-interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Godot + NoteMD + Markdown 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/multi-platform-build-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    多平台构建流程
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/release-and-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    发布与治理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/reference/app-config-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    app_config.toml 结构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_5" id="__nav_9_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    解释
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    解释
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/architecture-and-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构与迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/git-lfs-asset-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git LFS 资产迁移
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/sidecar-supply-feasibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sidecar 供给可行性
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/startup-node-update-acceleration-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    启动节点更新提速方案
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/knowledge-mastery-evolution-roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    知识彻底掌握演进路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diataxis/zh/explanation/development-progress-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发进度看板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#english" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        English
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中文
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="session-recovery">Session Recovery / 会话恢复<a class="headerlink" href="#session-recovery" title="Permanent link">&para;</a></h1>
+<h2 id="english">English<a class="headerlink" href="#english" title="Permanent link">&para;</a></h2>
+<p>Recovered session: <code>01a0931a-d813-70d1-9916-b723f5182ee4</code>. The original objective was to audit and execute the project convergence plan, test the changes, and update remote main after verification. Its last explicit request was to fix origin CI failures. The final nonempty turn stopped after committing the elevated WebView2 installer qualification fix.</p>
+<p>Previously accepted work is retained: U1–U6, Q/R/N follow-ups, and W1–W5 native-window evidence. Remote main was <code>6bf87b6d</code>; the working branch was <code>codex/project-convergence-20260912</code>. On recovery, local HEAD was <code>227678d</code>, while the actual remote branch was still <code>2ec296e</code>. The only existing tracked working-tree modification was <code>src-tauri/bin/server-x86_64-pc-windows-msvc.exe</code>; recovery preserves it.</p>
+<p>Recent completed changes:</p>
+<ul>
+<li><code>031f85f</code>: desktop resource resolution in <code>src/utils/RuntimePaths.ts</code>, <code>src/server.ts</code>, and <code>src-tauri/src/lib.rs</code>; Godot PCK preparation, centralized engine provisioning, desktop bundle configuration, runtime/installer probes, and their workflows/tests.</li>
+<li><code>be73203</code>: exact Tauri installer stamp fingerprints and correctly quoted MSI properties.</li>
+<li><code>2ec296e</code>: separate NSIS/MSI runners and retained startup diagnostics.</li>
+<li><code>227678d</code>: <code>scripts/verify-desktop-runtime.js</code>, <code>scripts/verify-elevated-desktop-runtime.ps1</code>, <code>scripts/verify-windows-installers.js</code>, <code>src/windows.installer.runtime.test.ts</code>, and the bilingual desktop resources plan. Elevated WebView2 argument policies are app-specific and require a cleanup receipt.</li>
+</ul>
+<p>Historical command receipts live under <code>output/project-convergence-2026-09-12/native-evidence/</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Recorded result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>node node_modules/jest/bin/jest.js --runInBand --ci --json --outputFile ...</code></td>
+<td>Node 22.19.0 / 24.14.0: 170 suites, 1,731 tests each at the desktop source checkpoint</td>
+</tr>
+<tr>
+<td><code>cargo test --manifest-path src-tauri/Cargo.toml --locked --lib -- --nocapture</code></td>
+<td>34 passed; mobile probe separately executed</td>
+</tr>
+<tr>
+<td><code>node scripts/verify-agent-workspace-tauri-window-evidence.js --strict --skip-proxy-smoke</code></td>
+<td>Both named native-window cases passed</td>
+</tr>
+<tr>
+<td><code>node scripts/verify-mobile-projection-replay.js</code></td>
+<td>Four host projections passed</td>
+</tr>
+<tr>
+<td><code>npm run build:with-vite</code>; <code>node scripts/prepare-desktop-godot-pack.js</code>; <code>node scripts/build-sidecar.js</code></td>
+<td>Build receipts report exit 0</td>
+</tr>
+<tr>
+<td><code>node node_modules/@tauri-apps/cli/tauri.js build --ci --bundles nsis,msi --config src-tauri/tauri.desktop.conf.json</code></td>
+<td>Installer build receipt reports exit 0</td>
+</tr>
+<tr>
+<td><code>node node_modules/jest/bin/jest.js src/windows.installer.runtime.test.ts src/windows.installer.payload.test.ts src/desktop.godot.pack.test.ts --runInBand --ci</code></td>
+<td>Latest fix: 3 suites, 19 tests, exit 0 on September 15</td>
+</tr>
+</tbody>
+</table>
+<p>The PowerShell parser/non-CI guard success is recorded in the old turn, commit message, and plan; recovery did not locate a separate command receipt. Historical checks are not presented as new executions. The prior failed installer run <code>34907653037</code> installed, checked payloads, and uninstalled both formats, but failed at CDP discovery on elevated WebView2 152.</p>
+<p>Continuation on October 1: pushed existing commit <code>227678d</code> to the original development branch. <a href="https://github.com/Jacobinwwey/NoteConnection/actions/runs/36817551883">Run 36817551883</a> passed MSI and confirmed both WebView2 policy cleanup receipts; NSIS failed when the 15-second screenshot subprocess deadline interrupted PNG writing. Commit <code>0e10450a</code> gives captures a bounded 60 seconds and records phase timings. Run <code>36820293638</code> then exposed a graph-read race with the delayed post-build page reload. Commit <code>18fec427</code> waits for the replacement document and reads a graph snapshot in one CDP evaluation. Two regression cases failed before this correction; 21 focused tests and a local runtime probe now pass. Local capture completed in 842 ms with complete process cleanup. <a href="https://github.com/Jacobinwwey/NoteConnection/actions/runs/36822174805">Run 36822174805</a> passed NSIS on attempt 1; the downloaded 105,588,816-byte installer matches SHA-256 <code>71a290ac14ca1bda85ff1349eb6c23dc603d617abcefc7bcf4e1229d30e99200</code>. Its capture metadata completed after 9,716 ms. MSI remained without a verdict for about 25 minutes, was cancelled, and GitHub returned <code>log not found</code> with no MSI artifacts. Only MSI was rerun as attempt 2 on the same source, but it again remained without a verdict. Commit <code>5b01b24d</code> preserves installer bytes before execution and adds a ten-minute step timeout so partial logs can still be uploaded. The old attempt was cancelled in favor of <a href="https://github.com/Jacobinwwey/NoteConnection/actions/runs/36828405439">run 36828405439</a>. NSIS passed on attempt 1; the downloaded 105,576,035-byte installer matches SHA-256 <code>60d4a155083379f2ac570d71deec626aa18b799ff9a9b4206bbd8f4f1896b122</code>, all three PNG screenshots are complete, and payload/removal/runtime/policy receipts match source fingerprint <code>940bd5afd0376274aaa7be26f0248f533e3c28c89bf537b0b70b01d83db65a3d</code>. MSI qualification failed after 49 seconds, before the ten-minute deadline. User-copied live output confirms successful install, payload and runtime checks, followed by uninstall error 1603. The downloaded 128,630,784-byte MSI matches its reported SHA-256 <code>9caece6092cfd76bf3b24600cb1960c584674084f81d5d747aa13221451d6aa0</code>. The evidence-upload step selected 17 files but stalled at artifact initialization for over twenty minutes; REST returns BlobNotFound for the job log. The detailed uninstall cause remains unknown. A subsequent diagnostic change prints bounded decoded MSI failure logs directly to step output and limits evidence upload to five minutes; the existing 21 focused tests pass. The application and verifier source are unchanged from <code>18fec427</code>. P4/P5 remain open pending acceptance, provenance archival, and verified main integration.</p>
+<p>Constraints: keep separate English/Chinese documentation; avoid C: writes; preserve existing binaries, ignored HDR inputs, and failed evidence; do not weaken payload assertions or clear shared installer preferences. HKLM policies are allowed only on disposable GitHub-hosted elevated runners and must be removed. Local PCK and clean-CI PCK have different optional HDR inputs. Signed release trust, Android devices/RSS, production ANN, and independent learner observations remain separate U7/U8 obligations. This continuation creates no release tag or release publication.</p>
+<p>Subsequent diagnostic checkpoint: commit <code>0652cf91</code> adds direct MSI failure-log output and bounds evidence upload. Run <code>36832726016</code> passes NSIS (105,582,559 bytes, SHA-256 <code>e977c29973f777c05e9b6551c7973c724311ba51235fc0cb1d07c181106c7a89</code>) but MSI stops reporting during qualification. Commit <code>87524992</code> adds a temporary diagnostic workflow; run <code>36836448951</code> replays the earlier MSI with the same bytes and passes install/runtime/uninstall, preserving detailed logs. This is diagnostic evidence, not fresh qualification. The next change routes installer output directly to files and emits stage/exit timings; actual subprocess probes and the existing 21 tests pass. No historical pipe-hang or 1603 root cause is asserted. From this point onward, the assistant obtains evidence and performs verification independently; no further requests for the user to retrieve page information.</p>
+<p>October 2 continuation: run <code>36838763881</code> on <code>453de115</code> again passes NSIS but loses the MSI hosted runner. Both this run and <code>36832726016</code> have independently retrieved GitHub host-loss annotations. The next scoped change separates installer build jobs from fresh qualification jobs and transports validated build receipts plus exact installer bytes. Five suites / 34 tests pass. Main remains unchanged; P4/P5 await the new isolated qualification result.</p>
+<p><a id="chinese"></a></p>
+<p>October 2 acceptance: run <code>36960840921</code>, source <code>129443f361fc42831f0f1371ab3066fbcdac69f5</code>, passes both build jobs and both independent NSIS/MSI qualification jobs (build and qualification attempt 1). Downloaded installer hashes, source/build receipts, runtime reports, policy/process/removal cleanup, runtime-data preservation and PNG integrity pass offline verification. The archive retains 232 evidence files plus its manifest, including historical failures and the 34-test contract receipt. P4 is complete; P5 awaits verified main integration and its required checks. Signing trust, Android devices/RSS, production ANN and U8 learner evidence remain open. Historical runner loss and MSI 1603 causes remain unproven. <a href="../evidence/2026-10-01-windows-installers/manifest.json">Evidence manifest</a>. The temporary MSI diagnostic workflow is retired; its source and replay evidence are retained in the archive.</p>
+<p>Final integration: remote main advanced from <code>6bf87b6d</code> to <code>8a7296c99387932e00ce14a7372847017ad26be0</code>. All seven main workflows pass: Migration Gates, Native Window Qualification, Windows Installer Qualification, Fixrisk Operational Readiness, Mobile E2E Detox Contracts, Docs Diataxis Site and Docs GitHub Pages Publish. Main installer run <code>36963202337</code> also passes both formats at build/qualification attempt 1; downloaded bytes, provenance, runtime/removal/policy receipts and PNGs pass independent verification. P5 is complete. The remaining U7/U8 scope is unchanged; no release tag was created. The existing local sidecar remains untouched. <a href="../evidence/2026-10-02-main-integration/manifest.json">Main evidence</a>.</p>
+<h2 id="_1">中文<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<p>恢复的旧会话：<code>01a0931a-d813-70d1-9916-b723f5182ee4</code>。最初目标为审计并执行项目收敛计划，完成测试后更新远端 main；最后的明确要求是修复 origin CI 失败。最后一个非空轮次中断于提权 WebView2 安装验收修复提交之后。</p>
+<p>保留既有验收：U1–U6、Q/R/N 后续计划、W1–W5 原生窗口证据。远端 main 为 <code>6bf87b6d</code>，工作分支为 <code>codex/project-convergence-20260912</code>。恢复时本地 HEAD 为 <code>227678d</code>，实际远端分支仍为 <code>2ec296e</code>。工作区原有且唯一的已跟踪修改是 <code>src-tauri/bin/server-x86_64-pc-windows-msvc.exe</code>，恢复过程中保留它。</p>
+<p>近期已完成变更：</p>
+<ul>
+<li><code>031f85f</code>：<code>src/utils/RuntimePaths.ts</code>、<code>src/server.ts</code>、<code>src-tauri/src/lib.rs</code> 中的桌面资源路径；Godot PCK 准备、集中式引擎供给、桌面 bundle 配置、运行及安装器探针、对应工作流和测试。</li>
+<li><code>be73203</code>：精确校验 Tauri 安装包标记字节，修正 MSI 属性值引号。</li>
+<li><code>2ec296e</code>：NSIS/MSI 使用独立 runner，保留启动失败诊断。</li>
+<li><code>227678d</code>：<code>scripts/verify-desktop-runtime.js</code>、<code>scripts/verify-elevated-desktop-runtime.ps1</code>、<code>scripts/verify-windows-installers.js</code>、<code>src/windows.installer.runtime.test.ts</code> 和双语桌面资源计划。提权 WebView2 使用应用专属参数策略，验收要求清理回执。</li>
+</ul>
+<p>历史命令收据位于 <code>output/project-convergence-2026-09-12/native-evidence/</code>：</p>
+<table>
+<thead>
+<tr>
+<th>命令</th>
+<th>已记录结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>node node_modules/jest/bin/jest.js --runInBand --ci --json --outputFile ...</code></td>
+<td>桌面源码检查点：Node 22.19.0 / 24.14.0 各 170 suites、1,731 tests</td>
+</tr>
+<tr>
+<td><code>cargo test --manifest-path src-tauri/Cargo.toml --locked --lib -- --nocapture</code></td>
+<td>34 passed；移动探针单独执行</td>
+</tr>
+<tr>
+<td><code>node scripts/verify-agent-workspace-tauri-window-evidence.js --strict --skip-proxy-smoke</code></td>
+<td>两个命名原生窗口用例通过</td>
+</tr>
+<tr>
+<td><code>node scripts/verify-mobile-projection-replay.js</code></td>
+<td>四种宿主投影通过</td>
+</tr>
+<tr>
+<td><code>npm run build:with-vite</code>；<code>node scripts/prepare-desktop-godot-pack.js</code>；<code>node scripts/build-sidecar.js</code></td>
+<td>构建收据退出码均为 0</td>
+</tr>
+<tr>
+<td><code>node node_modules/@tauri-apps/cli/tauri.js build --ci --bundles nsis,msi --config src-tauri/tauri.desktop.conf.json</code></td>
+<td>安装包构建收据退出码为 0</td>
+</tr>
+<tr>
+<td><code>node node_modules/jest/bin/jest.js src/windows.installer.runtime.test.ts src/windows.installer.payload.test.ts src/desktop.godot.pack.test.ts --runInBand --ci</code></td>
+<td>最后修复：9 月 15 日 3 suites、19 tests、退出码 0</td>
+</tr>
+</tbody>
+</table>
+<p>PowerShell parser／非 CI guard 的成功记录来自旧会话、提交消息与计划；本次未找到单独执行收据。历史检查不冒充本次新执行。前次失败安装包 run <code>34907653037</code> 已完成两种格式的安装、payload 校验和卸载，但提权 WebView2 152 的 CDP 发现失败。</p>
+<p>10 月 1 日续接：将现有提交 <code>227678d</code> 推送到原开发分支。<a href="https://github.com/Jacobinwwey/NoteConnection/actions/runs/36817551883">Run 36817551883</a> 的 MSI 通过，两种格式的 WebView2 策略清理回执均成功；NSIS 因截图子进程的 15 秒截止时间中断 PNG 写入而失败。提交 <code>0e10450a</code> 将截图预算改为有限的 60 秒并记录阶段耗时；run <code>36820293638</code> 随后暴露图读取与构建后延迟刷新页面的竞态。提交 <code>18fec427</code> 等待替换后的文档，并在一次 CDP 求值中取得图快照。两项回归已验证修复前失败；修正后 21 项针对性测试及本地运行探针通过。本机截图耗时 842 ms，所属进程清理完成。<a href="https://github.com/Jacobinwwey/NoteConnection/actions/runs/36822174805">Run 36822174805</a> 的 attempt 1 已通过 NSIS；下载的 105,588,816-byte 安装包匹配 SHA-256 <code>71a290ac14ca1bda85ff1349eb6c23dc603d617abcefc7bcf4e1229d30e99200</code>，截图元数据在 9,716 ms 后保存。MSI 约 25 分钟没有返回结果，取消后 GitHub 返回 <code>log not found</code>，也未上传 MSI 产物。已仅重跑同一源码的 MSI，作为 attempt 2，但该尝试再次长时间没有返回结果。提交 <code>5b01b24d</code> 将安装包归档移至执行之前，并设置十分钟步骤超时，以便后续上传部分日志。旧尝试已取消，后续由 <a href="https://github.com/Jacobinwwey/NoteConnection/actions/runs/36828405439">run 36828405439</a> 接替。NSIS 在 attempt 1 通过；下载的 105,576,035-byte 安装包匹配 SHA-256 <code>60d4a155083379f2ac570d71deec626aa18b799ff9a9b4206bbd8f4f1896b122</code>，三张 PNG 截图均完整，payload／卸载／运行／策略回执与源码指纹 <code>940bd5afd0376274aaa7be26f0248f533e3c28c89bf537b0b70b01d83db65a3d</code> 匹配。MSI 验收在 49 秒后失败，未触发十分钟截止时间。用户复制的实时输出确认安装、payload 和运行检查通过，随后卸载报错 1603；下载的 128,630,784-byte MSI 匹配报告中的 SHA-256 <code>9caece6092cfd76bf3b24600cb1960c584674084f81d5d747aa13221451d6aa0</code>。证据上传选中 17 个文件后停留在产物初始化阶段超过二十分钟；REST 获取 job 日志返回 BlobNotFound，卸载的详细原因仍未知。后续诊断变更将正确解码、长度受限的 MSI 失败日志直接写入步骤输出，并限定证据上传五分钟；既有 21 项针对性测试通过。应用和验收脚本源码与 <code>18fec427</code> 相同。P4/P5 仍等待验收结果、产物身份归档和验证后的 main 集成。</p>
+<p>约束：同步且分开维护中英文文档；尽量避免 C 盘写入；保留原有二进制、ignored HDR 输入和失败证据；不弱化 payload 断言，不清除共享安装偏好来掩盖问题。HKLM 策略仅限一次性 GitHub-hosted 提权 runner，必须清理。本机与干净 CI 的 PCK 可选 HDR 输入不同。签名发布信任、Android 真机／RSS、生产 ANN 与独立学习观察继续作为 U7/U8 的独立义务。本次不创建 release tag，也不发布 release。</p>
+<p>后续诊断检查点：提交 <code>0652cf91</code> 增加 MSI 详细错误日志直出并限定证据上传时间。Run <code>36832726016</code> 通过 NSIS（105,582,559 bytes，SHA-256 <code>e977c29973f777c05e9b6551c7973c724311ba51235fc0cb1d07c181106c7a89</code>），但 MSI 在验收中停止回报状态。提交 <code>87524992</code> 增加临时诊断工作流；run <code>36836448951</code> 重放此前同字节 MSI，安装／运行／卸载均通过并保留详细日志。这是诊断证据，不是新构建验收。随后将安装器输出直接写入文件，并记录阶段／退出耗时；真实子进程探针与既有 21 项测试均通过。尚不声称历史管道停滞或 1603 根因已查明。此后由助手自行取得证据并验证，不再要求用户前往页面取信息。</p>
+<p>10 月 2 日续接：<code>453de115</code> 对应 run <code>36838763881</code> 再次通过 NSIS，但 MSI hosted runner 失联；该运行与 <code>36832726016</code> 的宿主失联注解均已由助手通过 GitHub API 取得。下一项范围受限的改动将安装包构建与干净 runner 上的验收分离，并传递经过校验的构建回执和精确安装包字节。5 个套件／34 项测试通过。Main 未更新，P4/P5 等待新的隔离验收结果。</p>
+<p>10 月 2 日验收：run <code>36960840921</code>、源码 <code>129443f361fc42831f0f1371ab3066fbcdac69f5</code> 的两个构建 job 和两个独立 NSIS／MSI 验收 job 均通过，构建及验收均为 attempt 1。下载的安装包哈希、源码／构建回执、运行报告、策略／进程／卸载清理、运行数据保留及 PNG 完整性均通过离线核验。归档保留 232 个证据文件及其清单，包括历史失败和 34 项测试回执。P4 已完成；P5 仍待验证后的 main 集成及必需检查。签名信任、Android 真机／RSS、生产 ANN 和 U8 学习者证据保持未完成。历史 runner 失联及 MSI 1603 根因仍未证实。 <a href="../evidence/2026-10-01-windows-installers/manifest.json">证据清单</a>。临时 MSI 诊断工作流已退役，其源码与回放证据保留在归档中。</p>
+<p>最终集成：远端 main 从 <code>6bf87b6d</code> 更新到 <code>8a7296c99387932e00ce14a7372847017ad26be0</code>。七项主分支工作流全部通过：Migration Gates、Native Window Qualification、Windows Installer Qualification、Fixrisk Operational Readiness、Mobile E2E Detox Contracts、Docs Diataxis Site 和 Docs GitHub Pages Publish。主分支安装包 run <code>36963202337</code> 的两种格式也均在构建／验收 attempt 1 通过；下载字节、来源、运行／卸载／策略回执及 PNG 均通过独立核验。P5 已完成；U7/U8 其余范围保持不变，未创建 release tag，原有本机 sidecar 保持不动。 <a href="../evidence/2026-10-02-main-integration/manifest.json">主分支证据</a>。</p>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "content.code.copy", "search.highlight", "search.suggest"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

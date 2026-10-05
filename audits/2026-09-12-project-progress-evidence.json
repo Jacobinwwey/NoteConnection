@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "auditDate": "2026-09-12",
+  "sourceRevision": "e84d6ece9cce5b82902d4b9335ac096a136a8d2a",
+  "branch": "main",
+  "packageVersion": "1.8.0",
+  "runtime": {
+    "node": "22.19.0",
+    "os": "Windows",
+    "ciDeclaredNode": "24"
+  },
+  "scope": {
+    "productionCodeChanged": false,
+    "remoteCiRerun": false,
+    "freshDesktopPackageRerun": false,
+    "browserOrGodotRerun": false,
+    "androidNativeRerun": false
+  },
+  "checks": {
+    "typescript": {
+      "command": "rtk proxy node node_modules/typescript/bin/tsc --noEmit --incremental false",
+      "exitCode": 0
+    },
+    "jest": {
+      "suites": 159,
+      "passedSuites": 159,
+      "totalTests": 1445,
+      "passedTests": 1419,
+      "skippedTests": 26,
+      "failedTests": 0,
+      "elapsedMs": 178336,
+      "report": "output/project-audit-2026-09-12/jest-results.json",
+      "skipsByFile": {
+        "src/server.migration.test.ts": 13,
+        "src/agent_workspace.contract.parity.test.ts": 13
+      }
+    },
+    "diataxisBeforeEdits": {
+      "passed": true,
+      "entries": 18,
+      "languagePaths": 36,
+      "canonicalReferences": 64
+    },
+    "documentationFinal": {
+      "diataxisPassed": true,
+      "diataxisEntries": 18,
+      "diataxisLanguagePaths": 36,
+      "diataxisCanonicalReferences": 68,
+      "mkdocsExitCode": 0,
+      "addedLinksChecked": 140,
+      "newAnchorIssues": 0,
+      "adaptiveOriginalCheckedStepsPerLanguage": 39,
+      "adaptiveReopenedItemsPerLanguage": 3
+    },
+    "foundationReleaseQualification": {
+      "evaluator": "scripts/verify-foundation-release-evidence.js#verifyFoundationReleaseEvidence",
+      "checkedAt": "2026-09-12T00:00:00.000Z",
+      "ok": false,
+      "maxAgeHours": 168,
+      "sqliteAgeHours": 223.3301,
+      "annAgeHours": 231.6195,
+      "sqliteLatestSuiteKind": "matrix",
+      "sqliteRequiredSuiteKind": "soak",
+      "freshQualifiedSqliteHistoryCount": 0,
+      "freshQualifiedAnnHistoryCount": 0,
+      "report": "output/project-audit-2026-09-12/foundation-release-evidence.json"
+    }
+  },
+  "probes": [
+    {
+      "id": "F1",
+      "evidenceLevel": "production platform with an injected serialized in-memory store",
+      "trigger": "Pause ingest persistence; enqueue memory write; fail ingest save.",
+      "observations": {
+        "documentsBefore": 1,
+        "documentsBeforeCommit": 2,
+        "documentsAfterRollback": 1,
+        "memoryWriteAcknowledged": true,
+        "memoryEntriesAfterRollback": 0
+      },
+      "source": "output/project-audit-2026-09-12/ingest-isolation-probe.cjs",
+      "report": "output/project-audit-2026-09-12/ingest-isolation-probe.json"
+    },
+    {
+      "id": "F3",
+      "evidenceLevel": "synthetic production serializer boundary",
+      "observations": {
+        "testBudgetBytes": 2000,
+        "rawBytes": 1998,
+        "eventJsonBytes": 2094,
+        "rawTruncated": false,
+        "eventTruncated": false
+      },
+      "source": "output/project-audit-2026-09-12/boundary-probes.cjs"
+    },
+    {
+      "id": "F4",
+      "evidenceLevel": "synthetic production sequential matching boundary",
+      "mode": "fuzzy",
+      "cases": [
+        {
+          "term": "cat",
+          "content": "concatenate",
+          "matcherAccepted": true,
+          "sequentialEdgeCount": 0
+        },
+        {
+          "term": "知识",
+          "content": "知识图谱",
+          "matcherAccepted": true,
+          "sequentialEdgeCount": 0
+        }
+      ],
+      "source": "output/project-audit-2026-09-12/boundary-probes.cjs"
+    }
+  ],
+  "sourceMeasurements": {
+    "lineCounting": "UTF-8 split on CRLF/LF, including final empty line",
+    "src/server.ts": 17042,
+    "src/learning/KnowledgeLearningPlatform.ts": 13241,
+    "src/frontend/workspace_panes.js": 10273,
+    "src/learning/answerReleaseReview.ts": 6752,
+    "src/frontend/agent_workspace.js": 6012
+  },
+  "notes": {
+    "en": "A passing existing test baseline does not close the reproduced defects. Local output files are ignored diagnostic artifacts, not release attestations. The production implementation is unchanged by this audit.",
+    "zh": "现有测试通过不代表已关闭复现缺陷。output 文件为被忽略的本地诊断产物，不是发布证明。本轮审计未修改生产实现。"
+  }
+}

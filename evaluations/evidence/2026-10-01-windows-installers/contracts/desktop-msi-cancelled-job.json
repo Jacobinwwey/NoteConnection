@@ -1,0 +1,19 @@
+{
+  "label": "desktop-msi-cancelled-job",
+  "command": "gh",
+  "args": [
+    "run",
+    "view",
+    "36822174805",
+    "--repo",
+    "Jacobinwwey/NoteConnection",
+    "--job",
+    "110239916147",
+    "--log"
+  ],
+  "startedAt": "2026-10-01T06:38:01.741Z",
+  "completedAt": "2026-10-01T06:38:09.337Z",
+  "exitCode": 1,
+  "signal": null,
+  "logPath": "E:\\Knowledge_project\\NoteConnection_app\\output\\project-convergence-2026-09-12\\native-evidence\\desktop-msi-cancelled-job.log"
+}

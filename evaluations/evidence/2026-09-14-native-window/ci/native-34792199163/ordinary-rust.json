@@ -1,0 +1,52 @@
+{
+  "generatedAt": "2026-09-14T00:24:24.018Z",
+  "artifacts": {
+    "artifactDir": "D:\\a\\NoteConnection\\NoteConnection\\output\\tauri\\agent-workspace-rust-tests",
+    "reportPath": "D:\\a\\NoteConnection\\NoteConnection\\output\\tauri\\agent-workspace-rust-tests\\report-2026-09-14T00-24-24-018Z.json",
+    "latestReportPath": "D:\\a\\NoteConnection\\NoteConnection\\output\\tauri\\agent-workspace-rust-tests\\report-latest.json"
+  },
+  "strictSystemDeps": true,
+  "skipped": false,
+  "dependencyCheck": {
+    "pkgConfigAvailable": false,
+    "missingDependencies": []
+  },
+  "tests": [
+    {
+      "command": "cargo test --manifest-path src-tauri/Cargo.toml pathmode_window_toggle_plan --lib --locked -- --show-output",
+      "exitCode": 0,
+      "stdout": "\nrunning 2 tests\ntest tests::pathmode_window_toggle_plan_decouples_godot_signal_from_tauri_hide_restore_flags ... ok\ntest tests::pathmode_window_toggle_plan_restores_tauri_focus_when_restore_policy_is_enabled ... ok\n\nsuccesses:\n\nsuccesses:\n    tests::pathmode_window_toggle_plan_decouples_godot_signal_from_tauri_hide_restore_flags\n    tests::pathmode_window_toggle_plan_restores_tauri_focus_when_restore_policy_is_enabled\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 29 filtered out; finished in 0.00s\n\n",
+      "stderr": "   Compiling npm v0.1.0 (D:\\a\\NoteConnection\\NoteConnection\\src-tauri)\n    Finished `test` profile [unoptimized] target(s) in 8.05s\n     Running unittests src\\lib.rs (src-tauri\\target\\debug\\deps\\npm_lib-fccd81b26cc17daa.exe)\n",
+      "timedOut": false,
+      "errorMessage": "",
+      "timeoutMs": 180000,
+      "requiredTests": [
+        "pathmode_window_toggle_plan_decouples_godot_signal_from_tauri_hide_restore_flags",
+        "pathmode_window_toggle_plan_restores_tauri_focus_when_restore_policy_is_enabled"
+      ],
+      "missingTests": [],
+      "passed": true,
+      "evidenceFailure": null
+    },
+    {
+      "command": "cargo test --manifest-path src-tauri/Cargo.toml pathmode_window_toggled_event_payload --lib --locked -- --show-output",
+      "exitCode": 0,
+      "stdout": "\nrunning 1 test\ntest tests::pathmode_window_toggled_event_payload_contains_config_and_execution_plan ... ok\n\nsuccesses:\n\nsuccesses:\n    tests::pathmode_window_toggled_event_payload_contains_config_and_execution_plan\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 30 filtered out; finished in 0.00s\n\n",
+      "stderr": "   Compiling npm v0.1.0 (D:\\a\\NoteConnection\\NoteConnection\\src-tauri)\n    Finished `test` profile [unoptimized] target(s) in 5.26s\n     Running unittests src\\lib.rs (src-tauri\\target\\debug\\deps\\npm_lib-fccd81b26cc17daa.exe)\n",
+      "timedOut": false,
+      "errorMessage": "",
+      "timeoutMs": 180000,
+      "requiredTests": [
+        "pathmode_window_toggled_event_payload_contains_config_and_execution_plan"
+      ],
+      "missingTests": [],
+      "passed": true,
+      "evidenceFailure": null
+    }
+  ],
+  "summary": {
+    "passed": true,
+    "total": 2,
+    "failed": 0
+  }
+}

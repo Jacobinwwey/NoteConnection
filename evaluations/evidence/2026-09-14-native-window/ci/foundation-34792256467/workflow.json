@@ -1,0 +1,237 @@
+{
+  "conclusion": "success",
+  "headSha": "894ec1d0e083e2eab444ccf1f1e465eeb45b4947",
+  "jobs": [
+    {
+      "completedAt": "2026-09-14T00:24:44Z",
+      "conclusion": "success",
+      "databaseId": 103818531937,
+      "name": "Qualify windows-latest artifacts",
+      "startedAt": "2026-09-14T00:17:50Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-09-14T00:17:52Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-09-14T00:17:51Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:18:00Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "startedAt": "2026-09-14T00:17:52Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:18:16Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@v4",
+          "number": 3,
+          "startedAt": "2026-09-14T00:18:00Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:18:16Z",
+          "conclusion": "success",
+          "name": "Prepare isolated temporary files",
+          "number": 4,
+          "startedAt": "2026-09-14T00:18:16Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:18:33Z",
+          "conclusion": "success",
+          "name": "Run npm ci",
+          "number": 5,
+          "startedAt": "2026-09-14T00:18:16Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:18:48Z",
+          "conclusion": "success",
+          "name": "Run npm run build:with-vite",
+          "number": 6,
+          "startedAt": "2026-09-14T00:18:33Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:22:18Z",
+          "conclusion": "success",
+          "name": "Build the measured server sidecar",
+          "number": 7,
+          "startedAt": "2026-09-14T00:18:48Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:24:35Z",
+          "conclusion": "success",
+          "name": "Run three fresh SQLite soak and reference connector matrices",
+          "number": 8,
+          "startedAt": "2026-09-14T00:22:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:24:35Z",
+          "conclusion": "success",
+          "name": "Verify source and artifact qualification",
+          "number": 9,
+          "startedAt": "2026-09-14T00:24:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:24:40Z",
+          "conclusion": "success",
+          "name": "Archive measured artifacts and reports",
+          "number": 10,
+          "startedAt": "2026-09-14T00:24:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:24:40Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@v4",
+          "number": 19,
+          "startedAt": "2026-09-14T00:24:40Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:24:42Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@v4",
+          "number": 20,
+          "startedAt": "2026-09-14T00:24:40Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:24:43Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 21,
+          "startedAt": "2026-09-14T00:24:42Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/Jacobinwwey/NoteConnection/actions/runs/34792256467/job/103818531937"
+    },
+    {
+      "completedAt": "2026-09-14T00:22:43Z",
+      "conclusion": "success",
+      "databaseId": 103818532045,
+      "name": "Qualify ubuntu-latest artifacts",
+      "startedAt": "2026-09-14T00:17:50Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-09-14T00:17:52Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-09-14T00:17:51Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:17:54Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "startedAt": "2026-09-14T00:17:52Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:18:02Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@v4",
+          "number": 3,
+          "startedAt": "2026-09-14T00:17:54Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:18:02Z",
+          "conclusion": "success",
+          "name": "Prepare isolated temporary files",
+          "number": 4,
+          "startedAt": "2026-09-14T00:18:02Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:18:11Z",
+          "conclusion": "success",
+          "name": "Run npm ci",
+          "number": 5,
+          "startedAt": "2026-09-14T00:18:02Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:18:23Z",
+          "conclusion": "success",
+          "name": "Run npm run build:with-vite",
+          "number": 6,
+          "startedAt": "2026-09-14T00:18:11Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:20:57Z",
+          "conclusion": "success",
+          "name": "Build the measured server sidecar",
+          "number": 7,
+          "startedAt": "2026-09-14T00:18:23Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:22:35Z",
+          "conclusion": "success",
+          "name": "Run three fresh SQLite soak and reference connector matrices",
+          "number": 8,
+          "startedAt": "2026-09-14T00:20:57Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:22:35Z",
+          "conclusion": "success",
+          "name": "Verify source and artifact qualification",
+          "number": 9,
+          "startedAt": "2026-09-14T00:22:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:22:40Z",
+          "conclusion": "success",
+          "name": "Archive measured artifacts and reports",
+          "number": 10,
+          "startedAt": "2026-09-14T00:22:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:22:40Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@v4",
+          "number": 19,
+          "startedAt": "2026-09-14T00:22:40Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:22:40Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@v4",
+          "number": 20,
+          "startedAt": "2026-09-14T00:22:40Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-14T00:22:40Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 21,
+          "startedAt": "2026-09-14T00:22:40Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/Jacobinwwey/NoteConnection/actions/runs/34792256467/job/103818532045"
+    }
+  ],
+  "status": "completed"
+}

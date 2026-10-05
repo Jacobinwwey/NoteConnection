@@ -1,0 +1,54 @@
+{
+  "generatedAt": "2026-09-14T00:24:38.058Z",
+  "artifacts": {
+    "artifactDir": "D:\\a\\NoteConnection\\NoteConnection\\output\\tauri\\agent-workspace-window-evidence",
+    "reportPath": "D:\\a\\NoteConnection\\NoteConnection\\output\\tauri\\agent-workspace-window-evidence\\report-2026-09-14T00-24-38-058Z.json",
+    "latestReportPath": "D:\\a\\NoteConnection\\NoteConnection\\output\\tauri\\agent-workspace-window-evidence\\report-latest.json"
+  },
+  "strictWindowEvidence": true,
+  "proxySmoke": null,
+  "prerequisites": {
+    "cargoProbe": {
+      "command": "cargo --version",
+      "exitCode": 0,
+      "timedOut": false,
+      "errorMessage": ""
+    },
+    "dependencyCheck": {
+      "pkgConfigAvailable": false,
+      "missingDependencies": []
+    },
+    "canAttempt": true,
+    "reasons": []
+  },
+  "windowEvidence": {
+    "attempted": true,
+    "tests": [
+      {
+        "pattern": "pathmode_window_real_app_window_requires_main_window",
+        "command": "cargo test --manifest-path src-tauri/Cargo.toml pathmode_window_real_app_window_requires_main_window --lib --locked --features native-window-tests -- --ignored --show-output",
+        "exitCode": 0,
+        "timedOut": false,
+        "errorMessage": "",
+        "passed": true,
+        "evidenceFailure": null,
+        "logPath": "D:\\a\\NoteConnection\\NoteConnection\\output\\tauri\\agent-workspace-window-evidence\\rust-window-evidence-pathmode_window_real_app_window_requires_main_window-2026-09-14T00-24-38-058Z.log"
+      },
+      {
+        "pattern": "pathmode_window_real_app_window_lifecycle_emits_toggle_events",
+        "command": "cargo test --manifest-path src-tauri/Cargo.toml pathmode_window_real_app_window_lifecycle_emits_toggle_events --lib --locked --features native-window-tests -- --ignored --show-output",
+        "exitCode": 0,
+        "timedOut": false,
+        "errorMessage": "",
+        "passed": true,
+        "evidenceFailure": null,
+        "logPath": "D:\\a\\NoteConnection\\NoteConnection\\output\\tauri\\agent-workspace-window-evidence\\rust-window-evidence-pathmode_window_real_app_window_lifecycle_emits_toggle_events-2026-09-14T00-24-38-058Z.log"
+      }
+    ]
+  },
+  "summary": {
+    "status": "passed",
+    "passed": true,
+    "failedTests": []
+  }
+}

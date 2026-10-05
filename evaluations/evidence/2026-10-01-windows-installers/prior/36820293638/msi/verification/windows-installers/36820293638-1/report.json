@@ -1,0 +1,124 @@
+{
+  "generatedAt": "2026-10-01T05:46:01.039Z",
+  "sourceRevision": "0e10450aed3a1860bd91be5e16bad5073cf5b4ba",
+  "runId": "36820293638",
+  "runAttempt": "1",
+  "sourceFingerprint": {
+    "algorithm": "sha256",
+    "version": 2,
+    "digest": "5fd25c68604a253ce4c413423f4dd9e244ede95e0a4d663e2ff959c60cd51fca",
+    "fileCount": 593
+  },
+  "expectedFiles": {
+    "nsis": [
+      {
+        "name": "npm.exe",
+        "bytes": 17626112,
+        "sha256": "2224cebf36c0279507598da6de141a6b26d5e16b681008d67b95ec18ef8d040d"
+      },
+      {
+        "name": "server.exe",
+        "bytes": 77897143,
+        "sha256": "49f9d73bf3060a5f6f97bba16a16037e208dc21d9bccff45b71a4ba0c986dd4b"
+      },
+      {
+        "name": "godot.exe",
+        "bytes": 171924488,
+        "sha256": "63913d01be2c2d1f929b4a626f5347117126b34e9c64cbf350ea9f35a9657ebf"
+      },
+      {
+        "name": "markdown-worker.exe",
+        "bytes": 1884160,
+        "sha256": "93ff1b8cc2eb24a1e4a7255d6c7cf6e6826d2cdd23f1d2f18052f7924a44664e"
+      },
+      {
+        "name": "path_mode.pck",
+        "bytes": 311164,
+        "sha256": "cf8da327918e277e1b046b24b6c6cc167c6f7b136049e0283627723319afaa86"
+      }
+    ],
+    "msi": [
+      {
+        "name": "npm.exe",
+        "bytes": 17626112,
+        "sha256": "c78d79e5810dee8224a64130a0afa4499e964c9009bd58bb78b58d0ac9685b43"
+      },
+      {
+        "name": "server.exe",
+        "bytes": 77897143,
+        "sha256": "49f9d73bf3060a5f6f97bba16a16037e208dc21d9bccff45b71a4ba0c986dd4b"
+      },
+      {
+        "name": "godot.exe",
+        "bytes": 171924488,
+        "sha256": "63913d01be2c2d1f929b4a626f5347117126b34e9c64cbf350ea9f35a9657ebf"
+      },
+      {
+        "name": "markdown-worker.exe",
+        "bytes": 1884160,
+        "sha256": "93ff1b8cc2eb24a1e4a7255d6c7cf6e6826d2cdd23f1d2f18052f7924a44664e"
+      },
+      {
+        "name": "path_mode.pck",
+        "bytes": 311164,
+        "sha256": "cf8da327918e277e1b046b24b6c6cc167c6f7b136049e0283627723319afaa86"
+      }
+    ]
+  },
+  "signingScope": "Installer behavior only; signing trust is not qualified.",
+  "msi": {
+    "installer": "D:\\a\\NoteConnection\\NoteConnection\\src-tauri\\target\\release\\bundle\\msi\\NoteConnection_1.8.0_x64_en-US.msi",
+    "installerSha256": "225949b7ae461d1b3fc3f3e955b8c0660c6eb84e2d876ac95a445b1d884db32d",
+    "installDirectory": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36820293638-1\\MSI installed",
+    "install": {
+      "exitCode": 0,
+      "rebootRequested": false
+    },
+    "payload": [
+      {
+        "name": "npm.exe",
+        "bytes": 17626112,
+        "sha256": "c78d79e5810dee8224a64130a0afa4499e964c9009bd58bb78b58d0ac9685b43"
+      },
+      {
+        "name": "server.exe",
+        "bytes": 77897143,
+        "sha256": "49f9d73bf3060a5f6f97bba16a16037e208dc21d9bccff45b71a4ba0c986dd4b"
+      },
+      {
+        "name": "godot.exe",
+        "bytes": 171924488,
+        "sha256": "63913d01be2c2d1f929b4a626f5347117126b34e9c64cbf350ea9f35a9657ebf"
+      },
+      {
+        "name": "markdown-worker.exe",
+        "bytes": 1884160,
+        "sha256": "93ff1b8cc2eb24a1e4a7255d6c7cf6e6826d2cdd23f1d2f18052f7924a44664e"
+      },
+      {
+        "name": "path_mode.pck",
+        "bytes": 311164,
+        "sha256": "cf8da327918e277e1b046b24b6c6cc167c6f7b136049e0283627723319afaa86"
+      }
+    ],
+    "registrations": [
+      {
+        "PSChildName": "{59FCA3E1-9F03-4257-B4C4-F7EA6ACA7A65}",
+        "DisplayName": "NoteConnection",
+        "DisplayVersion": "1.8.0",
+        "InstallLocation": "D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36820293638-1\\MSI installed\\"
+      }
+    ],
+    "error": "AssertionError [ERR_ASSERTION]: Installed desktop runtime failed: Error: TypeError: Cannot read properties of undefined (reading 'nodes')\n    at <anonymous>:1:115\n    at <anonymous>:1:197\n    at Object.evaluate (D:\\a\\NoteConnection\\NoteConnection\\scripts\\verify-desktop-runtime.js:83:44)\n    at async verifyDesktopRuntime (D:\\a\\NoteConnection\\NoteConnection\\scripts\\verify-desktop-runtime.js:153:27); see D:\\a\\NoteConnection\\NoteConnection\\output\\verification\\windows-installers\\36820293638-1\\msi-runtime.log\n\n1 !== 0\n\n    at verifyInstalledRuntime (D:\\a\\NoteConnection\\NoteConnection\\scripts\\verify-windows-installers.js:70:10)\n    at qualifyMsiInstaller (D:\\a\\NoteConnection\\NoteConnection\\scripts\\verify-windows-installers.js:129:22)\n    at Object.qualifyMsiArtifact (D:\\a\\NoteConnection\\NoteConnection\\scripts\\verify-windows-installers.js:190:24)\n    at [eval]:1:48\n    at runScriptInThisContext (node:internal/vm:219:10)\n    at node:internal/process/execution:451:12\n    at [eval]-wrapper:6:24\n    at runScriptInContext (node:internal/process/execution:449:60)\n    at evalFunction (node:internal/process/execution:283:30)\n    at evalTypeScript (node:internal/process/execution:295:3)",
+    "uninstall": {
+      "exitCode": 0,
+      "rebootRequested": false
+    },
+    "removal": {
+      "payloadRemoved": true,
+      "registrationRemoved": true
+    },
+    "passed": false
+  },
+  "passed": false
+}
