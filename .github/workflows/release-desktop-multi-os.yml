@@ -346,6 +346,10 @@ jobs:
           fi
           cp "${GODOT_BIN}" "${TARGET_BIN}"
           chmod +x "${TARGET_BIN}"
+          # The upstream signature binds Godot.app's Info.plist; the standalone sidecar needs its own signature.
+          codesign --force --sign - "${TARGET_BIN}"
+          codesign --verify --strict --verbose=4 "${TARGET_BIN}"
+          "${TARGET_BIN}" --version
 
       - name: Build desktop bundle
         run: npm run tauri:build:mini

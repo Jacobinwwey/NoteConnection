@@ -54,6 +54,12 @@
 
 `Exec=npm` remains valid because `npm` is the existing packaged Cargo executable. The fix does not rename the product, rewrite pkg offsets after packaging, replace libc or manually repack the public release.
 
+### macOS Godot sidecar preparation
+
+- The first versioned macOS build exposed a separate packaging failure: the official Godot executable runs inside `Godot.app`, but its embedded signature still binds the app's `Info.plist` after copying it to a standalone sidecar. macOS rejects that copy with `SIGKILL`, and signature verification reports `invalid Info.plist`.
+- The macOS preparation step now ad-hoc signs the copied standalone sidecar, verifies its signature and runs `--version` before preparing the Godot resource pack. The checksummed upstream archive and the source app remain untouched.
+- An isolated macOS arm64 diagnostic reproduced the failure for fresh destinations, the release target, overwritten stubs and replaced inodes. All five failing copy cases passed both Python and Node launch probes after signing their separate control copies. This establishes the preparation fix; final versioned macOS application acceptance remains separate.
+
 ### CI, maintainability and documentation
 
 - Adds a final AppImage gate before either artifact upload. It reads stored SquashFS permissions, verifies portable metadata links and executable access, validates desktop fields and icon decoding, and compares the packaged server with the original build output.
@@ -72,7 +78,7 @@
 - On Ubuntu 22.04, both native FUSE and extract-and-run passed authentication/API checks, graph build, force/DAG positions, Markdown/pulldown, reader display, Godot entry/return and normal shutdown with only loopback networking. The same bytes passed both launch modes on Ubuntu 24.04; host native testing additionally demonstrated reader and Godot entry/return, while host extract-and-run evidence covers APIs, visible graph and normal exit. The 2026-10-04 KVM rerun repeated the catalog and both launch modes and verified guest shutdown.
 - Validated local AppImage SHA-256: `d05312d08ac94379a96de79c547e8deb450775b4b39e5b6ecc9cd6e2bbcdb131`. It retains **1.8.0 solely for local diagnosis** and was built from production commit `6ad49655`. The only subsequent changes at `cd9ae710` are the four test files; production-input identity was rechecked.
 - **v1.9.0 artifact acceptance is pending.** Version metadata is aligned for the new build. CI creates a draft release and keeps desktop and Android uploads in draft. The exact versioned CI AppImage must pass artifact and KVM acceptance before the release is promoted; the earlier diagnostic artifact result does not establish that the v1.9.0 bytes have passed.
-- **Platform boundary:** this round did not build or qualify Windows, macOS or Android release artifacts. Upstream Windows/host-mobile evidence is historical evidence for its recorded inputs, not fresh cross-platform acceptance of the new candidate. Hardware GPU/audio, production ANN and large-corpus performance are also outside the Linux packaging result.
+- **Platform boundary:** the Linux qualification and macOS Godot launch diagnosis do not establish complete Windows, macOS or Android release acceptance. Upstream Windows/host-mobile evidence is historical evidence for its recorded inputs, not fresh cross-platform acceptance of the new candidate. Hardware GPU/audio, production ANN and large-corpus performance are also outside the Linux packaging result.
 - Known observations remain: reader loading/outline placeholders and some Mermaid/DAG label presentation issues; small-graph analysis may use a sequential worker fallback. Runtime manifests and AppImage extraction caches remain after exit; tested application processes and FUSE mounts terminate normally, and test caches were removed separately after open-file checks.
 
 ---
@@ -131,6 +137,12 @@
 
 `Exec=npm` 仍有效，因为 `npm` 是既有 Cargo 可执行文件名且已打包。本修复没有更名产品、在打包后补写 pkg 偏移、替换 libc 或手工重打包公开制品。
 
+### macOS Godot sidecar 准备
+
+- 首次版本化 macOS 构建暴露了独立的打包问题：官方 Godot 可执行文件在 `Godot.app` 内正常运行，但复制为独立 sidecar 后，内嵌签名仍绑定原应用的 `Info.plist`。macOS 以 `SIGKILL` 拒绝启动，验签明确报告 `invalid Info.plist`。
+- macOS 准备步骤现在对复制出的独立 sidecar 执行 ad-hoc 签名、验签和 `--version` 启动检查，再准备 Godot 资源包。上游归档的散列校验和原始 app 保持不变。
+- 隔离 macOS arm64 诊断覆盖全新目标、发布目标、覆盖 stub 和更换 inode，均复现失败；五组失败用例另制对照副本，签名后均通过 Python 与 Node 启动探针。这证明了准备步骤修复，最终版本化 macOS 应用的验收另行进行。
+
 ### CI、可维护性与文档
 
 - 在两类制品上传之前执行最终 AppImage 门禁：读取 SquashFS 实际权限，验证元数据链接和可执行权限，检查 desktop 字段、图标解码，并比对包内 server 与构建原件。
@@ -149,5 +161,5 @@
 - Ubuntu 22.04 的原生 FUSE 与解包运行均在仅有回环网络时通过认证/API、图构建、Force/DAG、Markdown/pulldown、阅读器、Godot 进入/返回及正常退出。同一制品也通过 Ubuntu 24.04 两种启动方式：宿主原生验证覆盖阅读器和 Godot 进入/返回，宿主解包证据覆盖 API、可见图谱和正常退出。2026-10-04 最终 KVM 复验再次通过目录与两种启动方式，并验证客体正常关机。
 - 已测本地 AppImage SHA-256：`d05312d08ac94379a96de79c547e8deb450775b4b39e5b6ecc9cd6e2bbcdb131`。其 **1.8.0 版本号仅供本地诊断**，生产构建来源是 `6ad49655`；到 `cd9ae710` 仅增加 4 个测试文件修改，已再次核对生产输入身份。
 - **v1.9.0 制品验收仍待完成。** 新构建所需的版本元数据已对齐。CI 创建草稿发布，桌面和 Android 上传均保持草稿状态。必须对 CI 生成的新版本 AppImage 精确字节完成制品门禁与 KVM 验收后，才将发布转为公开；此前诊断制品的通过记录不能替代 v1.9.0 字节验收。
-- **平台边界：** 本轮没有构建或验收 Windows、macOS、Android 发布制品。上游 Windows/移动宿主记录只证明各自所记录输入的历史结果，不替代新候选的跨平台验收。硬件 GPU/音频、生产 ANN 和大语料性能也不在本轮 Linux 打包结论内。
+- **平台边界：** Linux 验证及 macOS Godot 启动诊断不等于已完成 Windows、macOS、Android 发布制品的全面验收。上游 Windows/移动宿主记录只证明各自所记录输入的历史结果，不替代新候选的跨平台验收。硬件 GPU/音频、生产 ANN 和大语料性能也不在本轮 Linux 打包结论内。
 - 保留的已知观察：阅读器加载/大纲占位文字、部分 Mermaid/DAG 标签显示问题，以及小图分析可能采用串行 worker fallback。正常退出会结束已测应用进程和 FUSE 挂载，但 runtime manifest 与 AppImage 解包缓存仍保留；测试在检查无打开文件后另外清理缓存。
