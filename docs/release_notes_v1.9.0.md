@@ -36,6 +36,7 @@
 
 ### Desktop, Godot and installed application behavior
 
+- The native About dialog reads the application version from Tauri's release configuration instead of displaying a stale hardcoded version.
 - Packages `path_mode.pck` with the desktop application and launches Godot from the installed resource pack instead of depending on the checkout or launcher's working directory. Explicit development overrides validate the Godot project marker.
 - Selects distinct browser-compatible private loopback ports for the HTTP server and bridge. Missing credentials are rejected when sidecar authentication is configured.
 - Adds native-window checks that prove the required tests actually ran and exercise Tauri/Godot window lifecycle behavior. Window screenshots, runtime logs and source/artifact identities are retained with the acceptance evidence.
@@ -119,6 +120,7 @@
 
 ### 桌面、Godot 与安装后行为
 
+- 原生“关于”对话框从 Tauri 发布配置读取应用版本，不再显示过时的硬编码版本号。
 - 桌面应用打包 `path_mode.pck`，从已安装资源包启动 Godot，不再依赖源码目录或启动器工作目录。显式开发覆盖路径需要包含有效 Godot 项目标记。
 - 为 HTTP 服务和 bridge 选择不同且浏览器可用的私有回环端口；配置 sidecar 认证后，缺失凭据的请求会被拒绝。
 - 原生窗口验证会核对必需测试是否真正执行，并检查 Tauri/Godot 窗口生命周期；截图、运行日志和源码/制品身份随证据归档。

@@ -2873,7 +2873,10 @@ pub fn run() {
                         "about" => {
                             println!("Action: About");
                             let _ = tauri_plugin_dialog::DialogExt::dialog(app_handle)
-                                .message("NoteConnection v1.6.0\n\nDeveloped by Jacob\nGitHub: https://github.com/Jacobinwwey")
+                                .message(format!(
+                                    "NoteConnection v{}\n\nDeveloped by Jacob\nGitHub: https://github.com/Jacobinwwey",
+                                    app_handle.package_info().version
+                                ))
                                 .title("About NoteConnection")
                                 .show(|_| {});
                         }
