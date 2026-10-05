@@ -5,6 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { sha256File } = require('./sidecar-build-fingerprint');
+const { verifyAppImageUpdate } = require('./appimage-update');
 
 function verifySquashfsPermissions(manifest) {
   const entries = manifest.split('\n').filter((line) => /^[dl-][rwxstST-]{9}\s/.test(line));
@@ -104,6 +105,7 @@ function verifyAppDir(appDirPath, sourceServerPath) {
 function verifyAppImage(artifactPath, sourceServerPath) {
   const artifact = fs.realpathSync(artifactPath);
   const sourceServer = fs.realpathSync(sourceServerPath);
+  const update = verifyAppImageUpdate(artifact);
   const extractionDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'noteconnection-appimage-'));
   try {
     const offset = execFileSync(artifact, ['--appimage-offset'], { encoding: 'utf8', timeout: 30000 }).trim();
@@ -126,7 +128,7 @@ function verifyAppImage(artifactPath, sourceServerPath) {
       stdio: 'pipe',
       timeout: 30000,
     });
-    return { artifact, name: integration.name, executable: path.basename(integration.executablePath), serverSha256: integration.serverSha256 };
+    return { artifact, name: integration.name, executable: path.basename(integration.executablePath), serverSha256: integration.serverSha256, ...update };
   } finally {
     fs.rmSync(extractionDirectory, { recursive: true, force: true });
   }

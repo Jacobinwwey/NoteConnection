@@ -9,20 +9,33 @@ Install the usual Tauri Linux build dependencies and the artifact verifier tools
 ```bash
 sudo apt-get install desktop-file-utils libgdk-pixbuf2.0-bin squashfs-tools
 npm ci
+find src-tauri -maxdepth 1 -type f -name '*.AppImage.zsync' -delete
 npm run tauri:build:mini
-npm run verify:appimage -- src-tauri/target/release/bundle/appimage/NoteConnection_1.8.0_amd64.AppImage src-tauri/bin/server-x86_64-unknown-linux-gnu
-sha256sum src-tauri/target/release/bundle/appimage/*.AppImage
+appimage=src-tauri/target/release/bundle/appimage/NoteConnection_1.9.1_amd64.AppImage
+mv -- "src-tauri/$(basename "$appimage").zsync" "${appimage}.zsync"
+npm run verify:appimage -- "$appimage" src-tauri/bin/server-x86_64-unknown-linux-gnu
+sha256sum "$appimage" "${appimage}.zsync"
 ```
 
-Substitute the actual release filename. `verify:appimage` reads the final SquashFS manifest, checks that packaged files are readable and executables/directories usable by users other than the build owner, then extracts into a fresh temporary directory with `unsquashfs`. This preserves stored permissions; the AppImage runtime's `--appimage-extract` can replace directory modes with 0700.
+Substitute the actual release filename and output directory, including any custom Cargo target directory. The official bundled `zsyncmake` writes `<AppImage basename>.zsync` in Tauri's `src-tauri` working directory even when the image output is absolute. Move that exact file beside the image; a missing source is a build failure. The release workflow clears previous controls before building and performs this move before verification and either upload.
+
+`verify:appimage` requires the adjacent `.zsync`, checks native update information, filename/relative URL, file length, SHA-1 and checksum-table structure against the exact final image. It then reads the final SquashFS manifest, checks that packaged files are readable and executables/directories usable by users other than the build owner, and extracts into a fresh temporary directory with `unsquashfs`. This preserves stored permissions; the AppImage runtime's `--appimage-extract` can replace directory modes with 0700.
 
 The verifier rejects absolute, escaping, dangling, or cyclic integration links, checks `.DirIcon`, the root desktop entry, `AppRun`, `AppRun.wrapped`, the desktop `Exec` target and themed icon, validates the desktop file with `desktop-file-validate`, and decodes the icon with GDK Pixbuf. The required second argument is the original server sidecar from the same build: the packaged server must match its complete SHA-256, including the appended pkg payload. It deletes its temporary extraction on success or failure. The Linux release workflow runs it before either artifact upload.
 
 Run the regression suite with:
 
 ```bash
-npm test -- --runInBand src/appimage.portability.test.ts src/appimage.patchelf.test.ts src/simulation.worker.offline.test.ts
+npm test -- --runInBand src/appimage.update.test.ts src/appimage.portability.test.ts src/appimage.patchelf.test.ts src/simulation.worker.offline.test.ts
 ```
+
+## Verify native updates and publish the pair
+
+The Linux release contract currently supports amd64. Its embedded information is `gh-releases-zsync|Jacobinwwey|NoteConnection|latest|NoteConnection_*_amd64.AppImage.zsync`, owned by `scripts/appimage-update.js`. Keep exactly one matching control asset in the product release. Other architectures need their own explicit release contract before publication. Product releases must be marked Latest when the accepted draft is published; Godot mirror releases remain `latest=false`.
+
+Use the plugin's bundled official generator. It runs after appimagetool finishes metadata and signing. Do not alter the AppImage after generation. Publish the AppImage and its adjacent `.zsync` together in the same GitHub release, include both in `SHA256SUMS.txt` and the asset manifest, and verify downloaded bytes against the accepted CI build. The zsync `URL` is the AppImage basename, resolved relative to its control-file URL. Do not replace it with a build-host path or generate a control file from an earlier image.
+
+The artifact gate checks the control header and table structure. Establish actual delta reconstruction separately with an official AppImageUpdate/zsync client, preserving its version, command, logs and target SHA-256 comparison. A v1.9.0 AppImage can supply local seed bytes when the new control URL is explicitly provided; it cannot discover updates by itself because v1.9.0 contains no update information. Before publication, serve the exact CI candidate and its unchanged control file together from a local HTTP server that supports Range requests, and provide that control URL explicitly to the client. Require reconstructed SHA-256 to equal the candidate. After publication, repeat against `https://github.com/Jacobinwwey/NoteConnection/releases/download/v1.9.1/NoteConnection_1.9.1_amd64.AppImage.zsync` and verify the public download matches the accepted candidate. Test automatic discovery with a metadata-bearing image after the product release is Latest.
 
 ## Verify application behavior
 
