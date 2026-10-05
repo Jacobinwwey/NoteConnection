@@ -69,3 +69,37 @@ Jest with `ts-jest` (configured in `jest.config.js`). Node.js 20 is the CI targe
 5. Is database access through the store interface?
 6. Does the change avoid `any` in public API signatures?
 7. For performance-sensitive code: is `PerformanceLogger` used for timing?
+
+## Linux AppImage Packaging Contract
+
+### Scope
+
+Changes to the Tauri CLI, sidecars, Linux build runner, or release workflow must preserve the final artifact's portability. Build Linux releases on Ubuntu 22.04 (glibc 2.35), the catalog baseline.
+
+### Commands
+
+Use `npm run tauri:build:mini`, then `npm run verify:appimage -- <image.AppImage> <original-server-sidecar>`. Both verifier arguments are required and must come from the same build.
+
+### Boundary and environment
+
+The Linux runner selects `scripts/appimage-patchelf.js` through `PATCHELF`. `NOTE_CONNECTION_APPIMAGE_PATCHELF` identifies the original executable; `NOTE_CONNECTION_APPIMAGE_SERVER_SUFFIX` and `NOTE_CONNECTION_APPIMAGE_SERVER_SHA256` identify the protected pkg sidecar. Only its `--set-rpath` write is suppressed; dependency queries and other ELF operations remain enabled. AppRun supplies the sidecar's library search path. Never rewrite pkg's completed ELF payload offsets.
+
+### Validation and errors
+
+The final verifier rejects inaccessible stored SquashFS modes, invalid integration symlinks, missing desktop executables/icons, invalid image decoding, and any server hash mismatch. A matching path with changed bytes makes the patchelf adapter fail. Metadata success alone does not prove that the ELF loader, WebView, or backend starts.
+
+### Acceptance cases
+
+- Good: the Ubuntu 22.04 artifact launches as a normal user, serves authenticated graph/reader requests, and shuts down its sidecars.
+- Base: `.DirIcon` resolves inside the image, `AppRun.wrapped` is executable by other users, and the packaged server equals the original file.
+- Bad: testing only on the newer build host, resolving links against the CI workspace, or accepting a visible shell window while its backend has crashed.
+
+### Required tests
+
+Run the portability and patchelf behavioral suites. Verify the final image on the baseline OS and a newer host, retaining its SHA-256, logs, and screenshots. The installed Markdown worker must be discovered under Tauri's suffixless name and report `engine: pulldown` without a missing-worker fallback.
+
+Run the offline simulation worker suite and load a graph with external networking disabled, keeping loopback available for the sidecar. Graph layout dependencies must be bundled; an initial window and successful graph API do not establish that worker-produced node positions render.
+
+### Wrong and correct evidence
+
+An extracted directory with manually repaired links is diagnostic evidence. A fresh image produced by the corrected build, checked outside the build directory and exercised through the catalog worker and native runtime, establishes release acceptance. Use `unsquashfs` for stored-mode checks: runtime `--appimage-extract` can alter directory permissions.

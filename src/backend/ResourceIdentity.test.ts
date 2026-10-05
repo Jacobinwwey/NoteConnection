@@ -1,3 +1,4 @@
+import * as path from 'path';
 import {
     assertUniqueLegacyResourceIds,
     createResourceIdentity,
@@ -6,14 +7,16 @@ import {
 
 describe('Resource identity boundary', () => {
     test('normalizes workspace-relative paths to POSIX separators', () => {
-        const root = 'C:\\workspace\\Knowledge_Base';
-        const filePath = 'C:\\workspace\\Knowledge_Base\\algebra\\index.md';
+        const root = path.resolve('workspace', 'Knowledge_Base');
+        const filePath = path.join(root, 'algebra', 'index.md');
 
         expect(normalizeResourceRelativePath(root, filePath)).toBe('algebra/index.md');
     });
 
     test('rejects a path outside the workspace root', () => {
-        expect(() => normalizeResourceRelativePath('C:\\workspace\\Knowledge_Base', 'C:\\workspace\\other.md'))
+        const root = path.resolve('workspace', 'Knowledge_Base');
+
+        expect(() => normalizeResourceRelativePath(root, path.resolve(root, '..', 'other.md')))
             .toThrow(/outside workspace root/i);
     });
 

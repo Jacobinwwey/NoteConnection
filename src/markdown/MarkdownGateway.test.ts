@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { MarkdownGateway } from './MarkdownGateway';
+const { resolveHostMarkdownWorkerBinaryName } = require('../../scripts/tauri-sidecar-utils');
 
 class TempDir {
   public readonly path: string;
@@ -217,4 +218,62 @@ describe('MarkdownGateway', () => {
       }
     }
   });
+
+  const testUnix = process.platform === 'win32' ? test.skip : test;
+  testUnix.each(['beside-server', 'Resources', 'explicit-override', 'build-filename'])(
+    'buildIndex discovers the %s worker and preserves lookup priority', async (location) => {
+      const installedDirectory = ctx.temp.mkdir('installed/bin');
+      const originalExecPath = process.execPath;
+      const originalWorkerPath = process.env.NOTE_CONNECTION_MARKDOWN_WORKER_PATH;
+      const writeWorker = (workerPath: string, anchorId: string) => {
+        fs.mkdirSync(path.dirname(workerPath), { recursive: true });
+        fs.writeFileSync(workerPath, `#!/usr/bin/env node
+const fs = require('fs');
+let input = '';
+process.stdin.on('data', chunk => { input += chunk; });
+process.stdin.on('end', () => {
+  const request = JSON.parse(input);
+  if (request.kind !== 'build_index') process.exit(1);
+  const content = fs.readFileSync(request.filePath);
+  const block = { id: 0, type: 'heading', startByte: 0, endByte: content.length, startLine: 1, endLine: 1, anchorId: ${JSON.stringify(anchorId)} };
+  process.stdout.write(JSON.stringify({ ok: true, index: { totalBytes: content.length, totalLines: 1, blocks: [block], anchors: [], wikiLinks: [] } }));
+});
+`, { mode: 0o755 });
+      };
+      try {
+        process.execPath = path.join(installedDirectory, 'server');
+        delete process.env.NOTE_CONNECTION_MARKDOWN_WORKER_PATH;
+        const installedWorker = location === 'Resources'
+          ? path.join(installedDirectory, '..', 'Resources', 'markdown-worker')
+          : path.join(installedDirectory, 'markdown-worker');
+        writeWorker(installedWorker, 'installed-worker');
+        if (location === 'explicit-override' || location === 'build-filename') {
+          writeWorker(path.join(ctx.projectRoot, 'src-tauri', 'bin', resolveHostMarkdownWorkerBinaryName()), 'build-worker');
+        }
+        if (location === 'explicit-override') {
+          const explicitWorker = path.join(ctx.temp.path, 'explicit-worker');
+          writeWorker(explicitWorker, 'explicit-worker');
+          process.env.NOTE_CONNECTION_MARKDOWN_WORKER_PATH = explicitWorker;
+        }
+        const filePath = ctx.temp.file(path.join('project', 'Knowledge_Base', 'installed.md'), '# Installed markdown worker');
+        const index = await ctx.gateway.buildIndex({ filePath }, {
+          markdownEngine: 'pulldown',
+          chunkBlockSize: 8,
+          prefetchBlocks: 2,
+          indexCacheTtlSec: 1800,
+          maxDocBytes: 32 * 1024 * 1024,
+        });
+        expect(index.engine).toBe('pulldown');
+        expect(index.fallbackReason).toBeUndefined();
+        const chunk = await ctx.gateway.getChunk({ indexId: index.indexId, startBlock: 0, blockCount: 1 });
+        const expectedAnchor = location === 'explicit-override' ? 'explicit-worker'
+          : location === 'build-filename' ? 'build-worker' : 'installed-worker';
+        expect(chunk.blocks[0].anchorId).toBe(expectedAnchor);
+      } finally {
+        process.execPath = originalExecPath;
+        if (originalWorkerPath === undefined) delete process.env.NOTE_CONNECTION_MARKDOWN_WORKER_PATH;
+        else process.env.NOTE_CONNECTION_MARKDOWN_WORKER_PATH = originalWorkerPath;
+      }
+    }
+  );
 });

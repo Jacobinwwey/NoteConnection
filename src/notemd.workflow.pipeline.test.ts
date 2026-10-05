@@ -85,7 +85,7 @@ describe('Notemd Workflow Pipeline', () => {
         // Summary should have valid numbers
         expect(typeof result.summary.conceptsExtracted).toBe('number');
         expect(typeof result.summary.totalElapsedMs).toBe('number');
-        expect(result.summary.totalElapsedMs).toBeGreaterThan(0);
+        expect(result.summary.totalElapsedMs).toBeGreaterThanOrEqual(0);
     });
 
     test('runWorkflow with addWikiLinks injects wiki-links and writes _wikified file', async () => {

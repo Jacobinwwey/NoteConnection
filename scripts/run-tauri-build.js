@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 
-const { spawnSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const { execFileSync, spawnSync } = require('child_process');
 const { prepareDesktopGodotPack } = require('./prepare-desktop-godot-pack');
+const { resolveHostServerBinaryName } = require('./tauri-sidecar-utils');
+const { sha256File } = require('./sidecar-build-fingerprint');
 
 function extractFrontendBuildMode(argv) {
   const passthroughArgs = [];
@@ -62,6 +66,21 @@ function main() {
   const isWindows = process.platform === 'win32';
   const execCommand = isWindows ? 'cmd.exe' : 'npx';
   const execArgs = isWindows ? ['/d', '/s', '/c', 'npx', ...tauriArgs] : tauriArgs;
+  const appImageEnvironment = {};
+  if (process.platform === 'linux') {
+    const adapter = fs.realpathSync(path.join(__dirname, 'appimage-patchelf.js'));
+    const originalPatchelf = fs.realpathSync(execFileSync('which', [process.env.PATCHELF || 'patchelf'], {
+      encoding: 'utf8'
+    }).trim());
+    if (originalPatchelf === adapter) throw new Error('PATCHELF must name the original patchelf executable');
+    const tauriConfig = require('../src-tauri/tauri.conf.json');
+    appImageEnvironment.PATCHELF = adapter;
+    appImageEnvironment.NOTE_CONNECTION_APPIMAGE_PATCHELF = originalPatchelf;
+    appImageEnvironment.NOTE_CONNECTION_APPIMAGE_SERVER_SUFFIX = path.join(`${tauriConfig.productName}.AppDir`, 'usr', 'bin', 'server');
+    appImageEnvironment.NOTE_CONNECTION_APPIMAGE_SERVER_SHA256 = sha256File(
+      path.join(__dirname, '..', 'src-tauri', 'bin', resolveHostServerBinaryName())
+    );
+  }
 
   console.log(`[Tauri Build Runner] Cargo jobs: ${cargoBuildJobs}`);
   console.log(`[Tauri Build Runner] Cargo release opt-level: ${cargoReleaseOptLevel}`);
@@ -78,6 +97,7 @@ function main() {
     stdio: 'inherit',
     env: {
       ...process.env,
+      ...appImageEnvironment,
       NOTE_CONNECTION_TAURI_FRONTEND_BUILD_MODE: frontendBuildMode || process.env.NOTE_CONNECTION_TAURI_FRONTEND_BUILD_MODE || '',
       CARGO_BUILD_JOBS: String(cargoBuildJobs),
       CARGO_PROFILE_RELEASE_OPT_LEVEL: cargoReleaseOptLevel,

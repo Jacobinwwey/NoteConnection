@@ -1,4 +1,4 @@
-importScripts("https://d3js.org/d3.v6.min.js", "libs/gpu-browser.min.js", "layout_gpu.js");
+importScripts("libs/d3.v7.min.js", "libs/gpu-browser.min.js", "layout_gpu.js");
 
 let simulation;
 let nodes = [];

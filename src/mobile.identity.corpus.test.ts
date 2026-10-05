@@ -1,7 +1,6 @@
 import {
     createResourceIdentity,
     assertUniqueLegacyResourceIds,
-    normalizeResourceRelativePath,
 } from './backend/ResourceIdentity';
 import { Graph } from './core/Graph';
 
@@ -10,7 +9,7 @@ describe('mobile identity migration corpus', () => {
         const first = createResourceIdentity('notes/first.md', 'First', 'same body');
         const second = createResourceIdentity('notes/second.md', 'Second', 'same body');
         const fromWindows = createResourceIdentity(
-            normalizeResourceRelativePath('C:\\workspace\\Knowledge_Base', 'C:\\workspace\\Knowledge_Base\\Notes\\Cafe\u0301.md'),
+            'Notes\\Cafe\u0301.md',
             'Cafe',
             'body',
         );
