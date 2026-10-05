@@ -126,11 +126,11 @@
       "id": "release-and-governance",
       "category": "reference",
       "en": {
-        "canonical": ["docs/en/release_v1.6.0_report.md", "docs/release_notes_v1.6.0.md"],
+        "canonical": ["docs/en/release_v1.6.0_report.md", "docs/release_notes_v1.6.0.md", "docs/release_notes_v1.9.1.md"],
         "diataxis": "docs/diataxis/en/reference/release-and-governance.md"
       },
       "zh": {
-        "canonical": ["docs/zh/release_v1.6.0_report.md", "docs/release_notes_v1.6.0.md"],
+        "canonical": ["docs/zh/release_v1.6.0_report.md", "docs/release_notes_v1.6.0.md", "docs/release_notes_v1.9.1.md"],
         "diataxis": "docs/diataxis/zh/reference/release-and-governance.md"
       }
     },

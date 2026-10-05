@@ -189,6 +189,7 @@ jobs:
             platform_label: linux
             files: |
               src-tauri/target/release/bundle/**/*.AppImage
+              src-tauri/target/release/bundle/**/*.AppImage.zsync
               src-tauri/target/release/bundle/**/*.deb
           - runner: macos-latest
             platform_label: macos
@@ -351,6 +352,11 @@ jobs:
           codesign --verify --strict --verbose=4 "${TARGET_BIN}"
           "${TARGET_BIN}" --version
 
+      - name: Remove previous AppImage update controls
+        if: runner.os == 'Linux'
+        shell: bash
+        run: find src-tauri -maxdepth 1 -type f -name '*.AppImage.zsync' -delete
+
       - name: Build desktop bundle
         run: npm run tauri:build:mini
 
@@ -365,6 +371,8 @@ jobs:
             exit 1
           fi
           for artifact in "${artifacts[@]}"; do
+            # Tauri builds in src-tauri; bundled zsyncmake writes basename.zsync in that CWD.
+            mv -- "src-tauri/$(basename "$artifact").zsync" "${artifact}.zsync"
             npm run verify:appimage -- "${artifact}" src-tauri/bin/server-x86_64-unknown-linux-gnu
           done
 

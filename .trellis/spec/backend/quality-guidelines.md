@@ -78,15 +78,21 @@ Changes to the Tauri CLI, sidecars, Linux build runner, or release workflow must
 
 ### Commands
 
-Use `npm run tauri:build:mini`, then `npm run verify:appimage -- <image.AppImage> <original-server-sidecar>`. Both verifier arguments are required and must come from the same build.
+Use `npm run tauri:build:mini`, move the generated `src-tauri/<AppImage basename>.zsync` next to the final image, then run `npm run verify:appimage -- <image.AppImage> <original-server-sidecar>`. Both verifier arguments and the adjacent control file must come from the same build. Clear previous `src-tauri/*.AppImage.zsync` before building so a missing generator cannot reuse old output.
 
 ### Boundary and environment
 
 The Linux runner selects `scripts/appimage-patchelf.js` through `PATCHELF`. `NOTE_CONNECTION_APPIMAGE_PATCHELF` identifies the original executable; `NOTE_CONNECTION_APPIMAGE_SERVER_SUFFIX` and `NOTE_CONNECTION_APPIMAGE_SERVER_SHA256` identify the protected pkg sidecar. Only its `--set-rpath` write is suppressed; dependency queries and other ELF operations remain enabled. AppRun supplies the sidecar's library search path. Never rewrite pkg's completed ELF payload offsets.
 
+`scripts/appimage-update.js` owns the native `gh-releases-zsync` contract for the current amd64 release. The Linux runner passes it through `LDAI_UPDATE_INFORMATION`; the official bundled appimagetool/zsyncmake generates the control after the final metadata/signing writes. Tauri CLI 2.12.1 changes CWD to `src-tauri` in `crates/tauri-cli/src/build.rs:166`, and official zsyncmake 0.6.2 emits basename.zsync in that CWD. The release workflow already owns final artifact paths, so it moves each exact control beside its image and fails if absent. Do not add a second Tauri CLI parser or search guessed directories to collect it.
+
+Keep the product release Latest and Godot mirrors `latest=false`. Publish exactly one matching amd64 `.zsync` with its AppImage, and include both in checksums and the final asset manifest. An unsupported architecture must not pass the current release gate. Preserve v1.9.0: it lacks embedded metadata, so testing it as a delta seed requires the explicit new control URL.
+
 ### Validation and errors
 
 The final verifier rejects inaccessible stored SquashFS modes, invalid integration symlinks, missing desktop executables/icons, invalid image decoding, and any server hash mismatch. A matching path with changed bytes makes the patchelf adapter fail. Metadata success alone does not prove that the ELF loader, WebView, or backend starts.
+
+The same two-argument verifier requires correct embedded update information and the adjacent control file. It validates the official plain-file header, basename/relative URL, exact Length/SHA-1 and checksum table length `ceil(Length / Blocksize) * (rsum_bytes + checksum_bytes)`. The first `Hash-Lengths` field is a sequence count, not bytes per table entry. Never implement rsync weak hashes or MD4 to duplicate the official updater; table-content correctness is accepted through official reconstruction followed by full target SHA-256 equality.
 
 ### Acceptance cases
 
@@ -96,7 +102,7 @@ The final verifier rejects inaccessible stored SquashFS modes, invalid integrati
 
 ### Required tests
 
-Run the portability and patchelf behavioral suites. Verify the final image on the baseline OS and a newer host, retaining its SHA-256, logs, and screenshots. The installed Markdown worker must be discovered under Tauri's suffixless name and report `engine: pulldown` without a missing-worker fallback.
+Run the update, portability and patchelf behavioral suites. Update tests must cover a good official control fixture, missing/stale controls, same-size image corruption, malformed headers/tables and wrong owner/repository/channel/architecture/URL. Verify the final image on the baseline OS and a newer host, retaining its SHA-256, logs, and screenshots. The installed Markdown worker must be discovered under Tauri's suffixless name and report `engine: pulldown` without a missing-worker fallback.
 
 Run the offline simulation worker suite and load a graph with external networking disabled, keeping loopback available for the sidecar. Graph layout dependencies must be bundled; an initial window and successful graph API do not establish that worker-produced node positions render.
 

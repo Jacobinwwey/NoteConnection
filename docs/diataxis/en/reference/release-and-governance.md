@@ -16,6 +16,7 @@ This page is the governance index for release pipelines, docs delivery, and lear
 - [docs/release_notes_v1.6.0.md](../../../release_notes_v1.6.0.md)
 - [docs/release_notes_v1.6.7.md](../../../release_notes_v1.6.7.md)
 - [docs/release_notes_v1.7.0.md](../../../release_notes_v1.7.0.md)
+- [docs/release_notes_v1.9.1.md](../../../release_notes_v1.9.1.md)
 - [Knowledge Mastery Evolution Roadmap](../explanation/knowledge-mastery-evolution-roadmap.md)
 - [Development Progress Dashboard](../explanation/development-progress-dashboard.md)
 

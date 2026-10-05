@@ -16,6 +16,7 @@
 - [docs/release_notes_v1.6.0.md](../../../release_notes_v1.6.0.md)
 - [docs/release_notes_v1.6.7.md](../../../release_notes_v1.6.7.md)
 - [docs/release_notes_v1.7.0.md](../../../release_notes_v1.7.0.md)
+- [docs/release_notes_v1.9.1.md](../../../release_notes_v1.9.1.md)
 - [知识彻底掌握演进路线图](../explanation/knowledge-mastery-evolution-roadmap.md)
 - [开发进度看板](../explanation/development-progress-dashboard.md)
 

@@ -6,6 +6,7 @@ const { execFileSync, spawnSync } = require('child_process');
 const { prepareDesktopGodotPack } = require('./prepare-desktop-godot-pack');
 const { resolveHostServerBinaryName } = require('./tauri-sidecar-utils');
 const { sha256File } = require('./sidecar-build-fingerprint');
+const { APPIMAGE_UPDATE_INFORMATION } = require('./appimage-update');
 
 function extractFrontendBuildMode(argv) {
   const passthroughArgs = [];
@@ -74,6 +75,7 @@ function main() {
     }).trim());
     if (originalPatchelf === adapter) throw new Error('PATCHELF must name the original patchelf executable');
     const tauriConfig = require('../src-tauri/tauri.conf.json');
+    appImageEnvironment.LDAI_UPDATE_INFORMATION = APPIMAGE_UPDATE_INFORMATION;
     appImageEnvironment.PATCHELF = adapter;
     appImageEnvironment.NOTE_CONNECTION_APPIMAGE_PATCHELF = originalPatchelf;
     appImageEnvironment.NOTE_CONNECTION_APPIMAGE_SERVER_SUFFIX = path.join(`${tauriConfig.productName}.AppDir`, 'usr', 'bin', 'server');
